@@ -2,7 +2,7 @@ Sure! Here's a short and clear README for your GitHub page on **DeepSeek LLM**, 
 
 ---
 
-# DeepSeek LLM
+# DeepSeek R-1 LLM
 
 DeepSeek is a powerful language model designed for research and development in natural language processing. This repository provides resources for training, fine-tuning, and understanding the mathematical foundations behind reinforcement learning methods applied to LLMs.
 
