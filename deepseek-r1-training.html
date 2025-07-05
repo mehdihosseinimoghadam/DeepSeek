@@ -1,0 +1,2908 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DeepSeek R1 Training: Complete Implementation Guide</title>
+    <!-- KaTeX for Math Rendering -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css" integrity="sha384-n8MVd4RsNIU0KO<a>... existing code ...</a>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js" integrity="sha384-XjKyOOlGwcjNTAIQHIpgOno0Hl1YQqzUOEleOLALmuqehneUG+vnGctmUb0ZY0l8" crossorigin="anonymous"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" integrity="sha384-+VBxd3r6XgURycqtZ117nYw44OOcIax56Z4dCRWbxyPt0Koah1uHoK0o4+/RRE05" crossorigin="anonymous"></script>
+    
+    <!-- highlight.js for Code Snippets -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', (event) => {
+            // Render mathematical expressions
+            renderMathInElement(document.body, {
+                delimiters: [
+                    {left: '$$', right: '$$', display: true},
+                    {left: '$', right: '$', display: false},
+                    {left: '\\(', right: '\\)', display: false},
+                    {left: '\\[', right: '\\]', display: true}
+                ]
+            });
+            // Highlight code blocks
+            document.querySelectorAll('pre code').forEach((block) => {
+                hljs.highlightElement(block);
+            });
+        });
+    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --dark-bg: #111827;
+            --card-bg: #1f2937;
+            --border-color: #374151;
+            --primary-color: #3b82f6;
+            --secondary-color: #6366f1;
+            --accent-color: #818cf8;
+            --text-primary: #f9fafb;
+            --text-secondary: #d1d5db;
+            --success-color: #10b981;
+            --warning-color: #f59e0b;
+            --gradient-1: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+            --gradient-2: linear-gradient(135deg, #a855f7 0%, #ec4899 100%);
+            --gradient-3: linear-gradient(135deg, #22d3ee 0%, #3b82f6 100%);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--dark-bg);
+            color: var(--text-primary);
+            line-height: 1.7;
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 1500px;
+            margin: 0 auto;
+            padding: 0 40px;
+        }
+
+        /* Header */
+        .header {
+            background: var(--dark-bg);
+            padding: 80px 0;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-image: radial-gradient(circle at center, rgba(59, 130, 246, 0.1) 0%, transparent 50%);
+            opacity: 0.5;
+            animation: pulse 5s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+
+        .header h1 {
+            font-size: 4rem;
+            font-weight: 800;
+            margin-bottom: 20px;
+            position: relative;
+            z-index: 1;
+            letter-spacing: -2px;
+            background: var(--gradient-1);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .header p {
+            font-size: 1.25rem;
+            opacity: 0.8;
+            max-width: 800px;
+            margin: 0 auto;
+            position: relative;
+            z-index: 1;
+            color: var(--text-secondary);
+        }
+
+        /* Navigation */
+        .nav {
+            background: rgba(17, 24, 39, 0.8);
+            backdrop-filter: blur(10px);
+            padding: 20px 0;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            border-bottom: 1px solid var(--border-color);
+            transition: background 0.3s ease;
+        }
+
+        .nav-links {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+
+        .nav-links a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            padding: 10px 20px;
+            border-radius: 8px;
+        }
+
+        .nav-links a:hover {
+            color: var(--text-primary);
+            background: var(--primary-color);
+        }
+
+        /* Main Content */
+        .main-content {
+            padding: 80px 0;
+        }
+
+        .section {
+            margin-bottom: 100px;
+        }
+
+        .section-title {
+            font-size: 3rem;
+            font-weight: 700;
+            margin-bottom: 40px;
+            letter-spacing: -1px;
+            background: var(--gradient-2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-align: center;
+        }
+
+        .subsection {
+            margin-bottom: 60px;
+        }
+
+        .subsection-title {
+            font-size: 2rem;
+            font-weight: 600;
+            margin-bottom: 24px;
+            color: var(--accent-color);
+            border-bottom: 2px solid var(--border-color);
+            padding-bottom: 10px;
+        }
+
+        /* Cards */
+        .card {
+            background: var(--card-bg);
+            border-radius: 16px;
+            padding: 32px;
+            margin-bottom: 32px;
+            border: 1px solid var(--border-color);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: radial-gradient(circle at 100% 0%, rgba(59, 130, 246, 0.1), transparent 40%);
+            opacity: 0;
+            transition: opacity 0.4s ease-in-out;
+        }
+
+        .card:hover::before {
+            opacity: 1;
+        }
+        
+        .card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.4);
+            border-color: var(--primary-color);
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 24px;
+        }
+
+        .card-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 20px;
+            font-size: 1.5rem;
+            flex-shrink: 0;
+        }
+
+        .card-title {
+            font-size: 1.75rem;
+            font-weight: 600;
+        }
+        
+        .card p, .card li {
+            color: var(--text-secondary);
+        }
+
+        /* Code Blocks */
+        .code-block {
+            background: #282c34;
+            border-radius: 12px;
+            padding: 20px;
+            margin: 24px 0;
+            overflow-x: auto;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.95rem;
+            line-height: 1.6;
+            border: 1px solid var(--border-color);
+        }
+
+        .code-block pre {
+            margin: 0;
+            background: none !important;
+            padding: 0;
+        }
+
+        .code-block pre code {
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+
+        /* Interactive Elements */
+        .interactive-section {
+            background: transparent;
+            border: none;
+            border-radius: 16px;
+            padding: 0;
+            margin: 40px 0;
+        }
+
+        .step-card {
+            background: var(--dark-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 40px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05);
+        }
+
+        .step-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 40px;
+            height: 100%;
+        }
+
+        .step-math, .step-example {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 24px;
+            border: 1px solid var(--border-color);
+            transition: border-color 0.3s ease;
+        }
+        
+        .step-math:hover, .step-example:hover {
+            border-color: var(--accent-color);
+        }
+
+        .step-navigation {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 70px;
+            background: var(--card-bg);
+            border-top: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 30px;
+        }
+
+        .nav-button {
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .nav-button:hover {
+            background: var(--secondary-color);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+        }
+
+        .nav-button:disabled {
+            background: #374151;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .step-indicators {
+            display: flex;
+            gap: 12px;
+        }
+
+        .step-dot {
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: #4b5563;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            transform: scale(0.8);
+        }
+
+        .step-dot:hover {
+            background: var(--accent-color);
+        }
+
+        .step-dot.active {
+            background: var(--primary-color);
+            transform: scale(1.2);
+        }
+
+        /* Highlight Boxes */
+        .highlight-box, .warning-box, .success-box {
+            border-left-width: 5px;
+            padding: 24px;
+            margin: 24px 0;
+            border-radius: 0 12px 12px 0;
+            background: var(--card-bg);
+        }
+        
+        .highlight-box { border-color: var(--primary-color); }
+        .warning-box { border-color: var(--warning-color); }
+        .success-box { border-color: var(--success-color); }
+
+        /* Tables */
+        .comparison-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 32px 0;
+            background: var(--card-bg);
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid var(--border-color);
+            font-size: 0.95rem;
+        }
+
+        .comparison-table th,
+        .comparison-table td {
+            padding: 16px 20px;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .comparison-table th {
+            background: var(--dark-bg);
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .comparison-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .comparison-table tr:hover {
+            background: rgba(37, 99, 235, 0.1);
+        }
+
+        /* Responsive Design */
+        @media (max-width: 992px) {
+            .container {
+                padding: 0 20px;
+            }
+            .step-content {
+                grid-template-columns: 1fr;
+                gap: 20px;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 3rem;
+                letter-spacing: -1px;
+            }
+
+            .section-title {
+                font-size: 2.5rem;
+            }
+
+            .nav-links {
+                gap: 10px;
+                justify-content: space-around;
+            }
+            .nav-links a {
+                padding: 8px 12px;
+            }
+        }
+
+        /* Animation Classes */
+        .fade-in {
+            animation: fadeIn 0.8s ease-in-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .slide-in-left {
+            animation: slideInLeft 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        }
+
+        @keyframes slideInLeft {
+            from { opacity: 0; transform: translateX(-50px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="container">
+            <h1>DeepSeek R1 Training Guide</h1>
+            <p>A comprehensive implementation guide covering the complete training pipeline from base model to reasoning expert</p>
+        </div>
+    </header>
+
+    <!-- Navigation -->
+    <nav class="nav">
+        <div class="container">
+            <div class="nav-links">
+                <a href="#overview">Overview</a>
+                <a href="#setup">Setup</a>
+                <a href="#r1-zero">R1 Zero Training</a>
+                <a href="#cold-start">Cold Start Data</a>
+                <a href="#sft-training">SFT Training</a>
+                <a href="#reasoning-rl">Reasoning RL</a>
+                <a href="#distillation">Distillation</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <div class="container">
+            <!-- Overview Section -->
+            <section id="overview" class="section fade-in">
+                <h2 class="section-title">Training Overview</h2>
+                
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-icon" style="background: var(--gradient-1);">🧠</div>
+                        <h3 class="card-title">DeepSeek R1 Training Philosophy</h3>
+                    </div>
+                    <p>DeepSeek R1 represents a revolutionary approach to training reasoning-capable language models. Rather than training from scratch, the methodology builds upon existing foundation models through sophisticated reinforcement learning techniques.</p>
+                </div>
+
+                <div class="highlight-box">
+                    <h4>Key Innovation</h4>
+                    <p>The entire training process leverages different reinforcement learning strategies applied to their base model (DeepSeek V3), creating a reasoning specialist through iterative improvement rather than ground-up training.</p>
+                </div>
+
+                <div class="subsection">
+                    <h3 class="subsection-title">Training Pipeline Architecture</h3>
+                    
+                    <div class="interactive-section">
+                        <h4>Complete Training Flow</h4>
+                        <div id="overview-steps">
+                            <!-- Step 1: Base Model -->
+                            <div class="step-card">
+                                <div class="step-content">
+                                    <div class="step-math">
+                                        <h5>🏗️ Foundation Phase</h5>
+                                        <p><strong>Starting Point:</strong> Pre-trained Base Model</p>
+                                        <ul>
+                                            <li>DeepSeek V3 (Original) / Qwen 2.5-0.5B (Our Implementation)</li>
+                                            <li>General language understanding capabilities</li>
+                                            <li>Basic reasoning but inconsistent structure</li>
+                                            <li>No specialized reasoning training</li>
+                                        </ul>
+                                    </div>
+                                    <div class="step-example">
+                                        <h5>📊 Model Specifications</h5>
+                                        <div class="code-block">
+<pre><code class="language-plaintext">Model: Qwen/Qwen2.5-0.5B-Instruct
+Parameters: ~494M
+Vocabulary: 151,665 tokens
+Max Length: 131,072 tokens
+Architecture: Transformer-based</code></pre>
+                                        </div>
+                                        <p><strong>Why this approach?</strong> Starting with a capable foundation allows focusing on reasoning enhancement rather than basic language learning.</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Step 2: R1 Zero -->
+                            <div class="step-card">
+                                <div class="step-content">
+                                    <div class="step-math">
+                                        <h5>⚡ R1 Zero: Pure RL Experiment</h5>
+                                        <p><strong>Objective:</strong> Test if reasoning emerges naturally through RL</p>
+                                        <ul>
+                                            <li>GRPO (Group Reward Policy Optimization)</li>
+                                            <li>Multiple reward functions for evaluation</li>
+                                            <li>Structured output with &lt;think&gt; and &lt;answer&gt; tags</li>
+                                            <li>No supervised examples, pure exploration</li>
+                                        </ul>
+                                    </div>
+                                    <div class="step-example">
+                                        <h5>🎯 Results & Challenges</h5>
+                                        <p><strong>Successes:</strong></p>
+                                        <ul>
+                                            <li>Strong performance on reasoning benchmarks (AIME 2024)</li>
+                                            <li>Comparable to OpenAI-01-0912 on some tasks</li>
+                                            <li>Demonstrated RL potential for reasoning</li>
+                                        </ul>
+                                        <p><strong>Problems:</strong></p>
+                                        <ul>
+                                            <li>Messy, hard-to-follow reasoning in &lt;think&gt; tags</li>
+                                            <li>Language mixing in multilingual contexts</li>
+                                            <li>Inconsistent reasoning structure</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Step 3: Cold Start Data -->
+                            <div class="step-card">
+                                <div class="step-content">
+                                    <div class="step-math">
+                                        <h5>❄️ Cold Start Data Generation</h5>
+                                        <p><strong>Purpose:</strong> Create high-quality reasoning examples</p>
+                                        <p><strong>Methods:</strong></p>
+                                        <ul>
+                                            <li><strong>Few-shot Prompting:</strong> Show examples of good reasoning</li>
+                                            <li><strong>Direct Prompting:</strong> Explicitly request step-by-step solutions</li>
+                                            <li><strong>Post-processing:</strong> Human refinement of R1 Zero outputs</li>
+                                        </ul>
+                                    </div>
+                                    <div class="step-example">
+                                        <h5>📝 Data Quality Examples</h5>
+                                        <div class="code-block">
+<pre><code class="language-plaintext">Before (R1 Zero):
+&lt;think&gt; ummm... multiply 3 and 4... get 12... then add 2...&lt;/think&gt;
+&lt;answer&gt; 14 &lt;/answer&gt;
+
+After (Refined):
+&lt;think&gt;
+To solve 2 + 3 × 4, I need to follow order of operations.
+Step 1: Multiply 3 × 4 = 12
+Step 2: Add 2 + 12 = 14
+&lt;/think&gt;
+&lt;answer&gt; 14 &lt;/answer&gt;</code></pre>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Step 4: SFT Stage 1 -->
+                            <div class="step-card">
+                                <div class="step-content">
+                                    <div class="step-math">
+                                        <h5>📚 Supervised Fine-Tuning Stage 1</h5>
+                                        <p><strong>Goal:</strong> Teach structured reasoning patterns</p>
+                                        <p><strong>Process:</strong></p>
+                                        <ul>
+                                            <li>Train on cold start data using cross-entropy loss</li>
+                                            <li>Learn to format reasoning clearly</li>
+                                            <li>Establish consistent language usage</li>
+                                            <li>Improve reasoning step organization</li>
+                                        </ul>
+                                    </div>
+                                    <div class="step-example">
+                                        <h5>🔧 Training Configuration</h5>
+                                        <div class="code-block">
+<pre><code class="language-plaintext">Learning Rate: 2e-5
+Batch Size: 8 per device
+Gradient Accumulation: 2 steps
+Max Sequence Length: 4096
+Data Packing: Enabled
+Optimizer: AdamW with warmup</code></pre>
+                                        </div>
+                                        <p><strong>Outcome:</strong> Model with improved reasoning structure but still needs refinement for consistency and quality.</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Step 5: Reasoning-Oriented RL -->
+                            <div class="step-card">
+                                <div class="step-content">
+                                    <div class="step-math">
+                                        <h5>🎯 Reasoning-Oriented Reinforcement Learning</h5>
+                                        <p><strong>Enhanced Objectives:</strong></p>
+                                        <ul>
+                                            <li>Language consistency rewards</li>
+                                            <li>Reasoning quality assessment</li>
+                                            <li>Improved accuracy evaluation</li>
+                                            <li>Structured output enforcement</li>
+                                        </ul>
+                                    </div>
+                                    <div class="step-example">
+                                        <h5>🏆 Reward System Enhancement</h5>
+                                        <p><strong>New Reward Components:</strong></p>
+                                        <ul>
+                                            <li><strong>Language Consistency:</strong> Same language for question, reasoning, and answer</li>
+                                            <li><strong>Reasoning Depth:</strong> Encourage detailed step-by-step explanations</li>
+                                            <li><strong>Accuracy Plus:</strong> Correct answers with clear justification</li>
+                                        </ul>
+                                        <p>This stage fixes the language mixing issues from R1 Zero while maintaining reasoning capabilities.</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Step 6: Final Stages -->
+                            <div class="step-card">
+                                <div class="step-content">
+                                    <div class="step-math">
+                                        <h5>🎓 Final Training Stages</h5>
+                                        <p><strong>Rejection Sampling:</strong></p>
+                                        <ul>
+                                            <li>Generate multiple reasoning examples</li>
+                                            <li>Filter for highest quality using evaluation metrics</li>
+                                            <li>Keep only the best examples for further training</li>
+                                        </ul>
+                                        <p><strong>SFT Stage 2:</strong></p>
+                                        <ul>
+                                            <li>Train on filtered high-quality data</li>
+                                            <li>Add helpfulness and harmlessness objectives</li>
+                                            <li>Balance reasoning with general AI assistant capabilities</li>
+                                        </ul>
+                                    </div>
+                                    <div class="step-example">
+                                        <h5>🚀 Final Model Capabilities</h5>
+                                        <p><strong>DeepSeek R1 Achievements:</strong></p>
+                                        <ul>
+                                            <li>Clear, structured reasoning in &lt;think&gt; tags</li>
+                                            <li>Consistent language usage</li>
+                                            <li>High accuracy on mathematical reasoning</li>
+                                            <li>Helpful and safe AI assistant behavior</li>
+                                            <li>Suitable for real-world deployment</li>
+                                        </ul>
+                                        <p><strong>Distillation:</strong> Knowledge transfer to smaller, more efficient models for wider accessibility.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="step-navigation">
+                            <button class="nav-button" id="prev-btn" onclick="changeStep(-1)" disabled>Previous</button>
+                            <div class="step-indicators" id="step-indicators">
+                                <div class="step-dot active" onclick="goToStep(0)"></div>
+                                <div class="step-dot" onclick="goToStep(1)"></div>
+                                <div class="step-dot" onclick="goToStep(2)"></div>
+                                <div class="step-dot" onclick="goToStep(3)"></div>
+                                <div class="step-dot" onclick="goToStep(4)"></div>
+                                <div class="step-dot" onclick="goToStep(5)"></div>
+                            </div>
+                            <button class="nav-button" id="next-btn" onclick="changeStep(1)">Next</button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Setup Section -->
+            <section id="setup" class="section">
+                <h2 class="section-title">Environment Setup</h2>
+                
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-icon" style="background: var(--gradient-3);">⚙️</div>
+                        <h3 class="card-title">Development Environment</h3>
+                    </div>
+                    
+                    <div class="subsection">
+                        <h4>Repository Structure</h4>
+                        <div class="code-block">
+<pre><code class="language-plaintext">train-deepseek-r1/
+├── code.ipynb         # Complete implementation notebook
+├── requirements.txt   # Python dependencies
+└── r1_for_dummies.md  # Beginner-friendly explanation</code></pre>
+                        </div>
+                    </div>
+
+                    <div class="subsection">
+                        <h4>Installation Commands</h4>
+                        <div class="code-block">
+<pre><code class="language-bash"># Clone the repository
+git clone https://github.com/FareedKhan-dev/train-deepseek-r1.git
+cd train-deepseek-r1
+
+# Install dependencies
+pip install -r requirements.txt</code></pre>
+                        </div>
+                    </div>
+
+                    <div class="subsection">
+                        <h4>Required Dependencies</h4>
+                        <p>Install the essential libraries for DeepSeek R1 training:</p>
+                        <div class="code-block">
+<pre><code class="language-bash"># Install math verification library
+pip install math-verify
+
+# Install LaTeX to SymPy converter
+pip install latex2sympy2-extended
+
+# Install TRL (Transformers Reinforcement Learning)
+pip install trl</code></pre>
+                        </div>
+                    </div>
+
+                    <div class="subsection">
+                        <h4>Import Essential Libraries</h4>
+                        <div class="code-block">
+<pre><code class="language-python"># Import necessary libraries
+import logging
+import os
+import sys
+import re
+import math
+from dataclasses import dataclass, field
+from typing import List, Optional
+
+# Import PyTorch and Hugging Face Transformers
+import torch
+import transformers
+from transformers import (
+    AutoModelForCausalLM,
+    AutoTokenizer,
+    HfArgumentParser,
+    TrainingArguments,
+    set_seed,
+    TrainerCallback,
+    TrainerControl,
+    TrainerState,
+)
+from transformers.trainer_utils import get_last_checkpoint
+
+# Import dataset utilities
+import datasets
+from datasets import load_dataset
+
+# Import libraries from TRL (Transformers Reinforcement Learning)
+from trl import (
+    AutoModelForCausalLMWithValueHead,
+    PPOConfig,
+    PPOTrainer,
+    GRPOTrainer,
+    GRPOConfig,
+    SFTTrainer
+)
+
+# Import math-related utilities
+from latex2sympy2_extended import NormalizationConfig
+from math_verify import LatexExtractionConfig, parse, verify</code></pre>
+                        </div>
+                    </div>
+
+                    <div class="subsection">
+                        <h4>Required Libraries</h4>
+                        <div class="code-block">
+<pre><code class="language-python"># Core ML Libraries
+import torch
+import transformers
+from transformers import (
+    AutoModelForCausalLM, AutoTokenizer, 
+    HfArgumentParser, TrainingArguments
+)
+
+# Reinforcement Learning
+from trl import (
+    AutoModelForCausalLMWithValueHead,
+    PPOConfig, PPOTrainer, 
+    GRPOTrainer, GRPOConfig, 
+    SFTTrainer
+)
+
+# Mathematical Verification
+from latex2sympy2_extended import NormalizationConfig
+from math_verify import LatexExtractionConfig, parse, verify
+
+# Data Processing
+import datasets
+from datasets import load_dataset</code></pre>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-icon" style="background: var(--success-color);">📊</div>
+                        <h3 class="card-title">Training Datasets</h3>
+                    </div>
+                    
+                    <div class="subsection">
+                        <h4>Primary Datasets</h4>
+                        <table class="comparison-table">
+                            <thead>
+                                <tr>
+                                    <th>Dataset</th>
+                                    <th>Purpose</th>
+                                    <th>Size</th>
+                                    <th>Content Type</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>NuminaMath-TIR</td>
+                                    <td>R1 Zero Training</td>
+                                    <td>70K problems</td>
+                                    <td>Mathematical reasoning with CoT</td>
+                                </tr>
+                                <tr>
+                                    <td>Bespoke-Stratos-17k</td>
+                                    <td>R1 Training (Cold Start)</td>
+                                    <td>17K problems</td>
+                                    <td>Math and coding challenges</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="subsection">
+                        <h4>Dataset Loading Example</h4>
+                        <div class="code-block">
+<pre><code class="language-python"># Load NuminaMath-TIR for R1 Zero training
+math_dataset = load_dataset("AI-MO/NuminaMath-TIR", "default")
+print(f"Training samples: {len(math_dataset['train'])}")
+print(f"Test samples: {len(math_dataset['test'])}")
+
+# Sample structure
+sample = math_dataset['train'][0]
+print("Fields:", list(sample.keys()))
+# Output: ['problem', 'solution', 'messages']</code></pre>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-icon" style="background: var(--warning-color);">🤖</div>
+                        <h3 class="card-title">Base Model Selection</h3>
+                    </div>
+                    
+                    <div class="highlight-box">
+                        <h4>Model Choice Rationale</h4>
+                        <p>While DeepSeek used their 685GB DeepSeek-V3 model, we use the more accessible Qwen 2.5-0.5B-Instruct (0.9GB) for demonstration purposes. The methodology remains identical regardless of model size.</p>
+                    </div>
+
+                    <div class="subsection">
+                        <h4>Model Initialization</h4>
+                        <div class="code-block">
+<pre><code class="language-python">MODEL_NAME = "Qwen/Qwen2.5-0.5B-Instruct"
+
+# Initialize tokenizer
+tokenizer = AutoTokenizer.from_pretrained(
+    MODEL_NAME,
+    trust_remote_code=True,
+    padding_side="right"
+)
+
+# Set padding token
+if tokenizer.pad_token is None:
+    tokenizer.pad_token = tokenizer.eos_token
+
+# Load model
+model = AutoModelForCausalLM.from_pretrained(
+    MODEL_NAME,
+    trust_remote_code=True,
+    torch_dtype=torch.bfloat16
+)
+
+print(f"Model parameters: {model.num_parameters():,}")
+# Output: Model parameters: 494,032,768</code></pre>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- R1 Zero Training Section -->
+            <section id="r1-zero" class="section">
+                <h2 class="section-title">R1 Zero: Pure Reinforcement Learning</h2>
+                
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-icon" style="background: var(--gradient-1);">⚡</div>
+                        <h3 class="card-title">GRPO Algorithm Foundation</h3>
+                    </div>
+                    
+                    <p>R1 Zero represents the initial experiment in reasoning emergence through pure reinforcement learning. Unlike traditional RL approaches that require separate critic models, GRPO (Group Reward Policy Optimization) eliminates this computational overhead by deriving baselines directly from group action results.</p>
+                </div>
+
+                <div class="subsection">
+                    <h3 class="subsection-title">Reinforcement Learning Framework</h3>
+                    
+                    <div class="card">
+                        <h4>RL Components in Language Model Training</h4>
+                        <ul>
+                            <li><strong>Agent:</strong> The base language model (Qwen 2.5-0.5B)</li>
+                            <li><strong>Environment:</strong> Mathematical reasoning tasks</li>
+                            <li><strong>Action:</strong> Generated reasoning and answer sequences</li>
+                            <li><strong>Reward:</strong> Multi-faceted evaluation of response quality</li>
+                            <li><strong>Policy:</strong> Model's strategy for generating responses</li>
+                        </ul>
+                    </div>
+
+                    <div class="highlight-box">
+                        <h4>GRPO Innovation</h4>
+                        <p>Traditional RL doubles computational cost with separate actor-critic architectures. GRPO eliminates the critic by computing advantage estimates directly from group rewards, making training more efficient while maintaining learning effectiveness.</p>
+                    </div>
+                </div>
+
+                <div class="subsection">
+                    <h3 class="subsection-title">Prompt Template Design</h3>
+                    
+                    <div class="card">
+                        <h4>Structured Reasoning Format</h4>
+                        <div class="code-block">
+<pre><code class="language-python">SYSTEM_PROMPT = """
+A conversation between User and Assistant. The user asks a question, 
+and the Assistant solves it. The assistant first thinks about the 
+reasoning process in the mind and then provides the user with the answer. 
+The reasoning process and answer are enclosed within &lt;think&gt; &lt;/think&gt; 
+and &lt;answer&gt; &lt;/answer&gt; tags, respectively.
+
+Format: &lt;think&gt; reasoning process here &lt;/think&gt;&lt;answer&gt; answer here &lt;/answer&gt;
+"""</code></pre>
+                        </div>
+                        
+                        <p>This template establishes clear boundaries between internal reasoning and final answers, enabling targeted evaluation and reward assignment for different aspects of the response.</p>
+                    </div>
+                </div>
+
+                <div class="subsection">
+                    <h3 class="subsection-title">Multi-Dimensional Reward System</h3>
+                    
+                    <div class="interactive-section">
+                        <h4>Five-Component Reward Architecture</h4>
+                        <div id="reward-steps">
+                            <!-- Accuracy Reward -->
+                            <div class="step-card">
+                                <div class="step-content">
+                                    <div class="step-math">
+                                        <h5>🎯 Accuracy Reward</h5>
+                                        <p><strong>Mathematical Foundation:</strong></p>
+                                        <p>$$R_{accuracy} = \begin{cases} 
+                                        1.0 & \text{if } verify(answer_{parsed}, solution_{parsed}) = True \\
+                                        0.0 & \text{if } verify(answer_{parsed}, solution_{parsed}) = False \\
+                                        0.5 & \text{if parsing fails}
+                                        \end{cases}$$</p>
+                                        
+                                        <p><strong>Implementation Process:</strong></p>
+                                        <ol>
+                                            <li>Parse ground truth solution using latex2sympy2</li>
+                                            <li>Extract and normalize model's answer</li>
+                                            <li>Use math_verify for semantic equivalence checking</li>
+                                            <li>Assign binary reward based on mathematical correctness</li>
+                                        </ol>
+                                    </div>
+                                    <div class="step-example">
+                                        <h5>🧮 Mathematical Verification Example</h5>
+                                        <div class="code-block">
+<pre><code class="language-plaintext">Problem: "What is 2 + 3 × 4?"
+Ground Truth: "14"
+
+Model Response: "&lt;think&gt;Following order of operations...&lt;/think&gt;&lt;answer&gt;14&lt;/answer&gt;"
+
+Verification Process:
+1. Parse ground truth: 14 → symbolic representation
+2. Extract model answer: "14" → symbolic representation  
+3. Mathematical equivalence: 14 ≡ 14 → True
+4. Reward: 1.0
+
+Alternative Model Response: "&lt;answer&gt;20&lt;/answer&gt;"
+1. Parse: 20 → symbolic representation
+2. Mathematical equivalence: 20 ≡ 14 → False  
+3. Reward: 0.0</code></pre>
+                                        </div>
+                                        <p><strong>Why This Matters:</strong> Pure mathematical correctness ensures the model learns actual problem-solving rather than pattern matching on text similarity.</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Format Reward -->
+                            <div class="step-card">
+                                <div class="step-content">
+                                    <div class="step-math">
+                                        <h5>📋 Format Reward</h5>
+                                        <p><strong>Regex Pattern Matching:</strong></p>
+                                        <p>$$R_{format} = \begin{cases} 
+                                        1.0 & \text{if response matches } \texttt{<think>.*</think><answer>.*</answer>} \\
+                                        0.0 & \text{otherwise}
+                                        \end{cases}$$</p>
+                                        
+                                        <p><strong>Pattern Requirements:</strong></p>
+                                        <ul>
+                                            <li>Must start with &lt;think&gt; tag</li>
+                                            <li>Reasoning content within think tags</li>
+                                            <li>Must end with &lt;answer&gt; tag</li>
+                                            <li>Final answer within answer tags</li>
+                                            <li>No additional content outside structure</li>
+                                        </ul>
+                                    </div>
+                                    <div class="step-example">
+                                        <h5>✅ Format Compliance Examples</h5>
+                                        <div class="code-block">
+<pre><code class="language-plaintext">✅ CORRECT FORMAT (Reward: 1.0):
+"&lt;think&gt;I need to solve 2 + 3 × 4. Order of operations says multiply first: 3 × 4 = 12, then add: 2 + 12 = 14&lt;/think&gt;&lt;answer&gt;14&lt;/answer&gt;"
+
+❌ INCORRECT FORMATS (Reward: 0.0):
+"The answer is 14" (no tags)
+"&lt;answer&gt;14&lt;/answer&gt;" (missing think tag)
+"&lt;think&gt;Calculate...&lt;/think&gt; The final answer is 14" (content outside tags)
+"&lt;think&gt;Step 1...&lt;answer&gt;14&lt;/answer&gt;&lt;/think&gt;" (wrong tag order)</code></pre>
+                                        </div>
+                                        <p><strong>Training Impact:</strong> Strict format enforcement teaches the model to consistently separate reasoning from conclusions, making outputs more interpretable and debuggable.</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Reasoning Steps Reward -->
+                            <div class="step-card">
+                                <div class="step-content">
+                                    <div class="step-math">
+                                        <h5>🔍 Reasoning Steps Reward</h5>
+                                        <p><strong>Step Detection Formula:</strong></p>
+                                        <p>$$R_{reasoning} = \min\left(1.0, \frac{\text{count}(\text{reasoning indicators})}{3}\right)$$</p>
+                                        
+                                        <p><strong>Reasoning Indicators Pattern:</strong></p>
+                                        <div class="code-block"><pre><code class="language-regex">(Step \d+:|^\d+\.|\n-|\n\*|First,|Second,|Next,|Finally,)</code></pre></div>
+                                        
+                                        <p><strong>Reward Scaling:</strong></p>
+                                        <ul>
+                                            <li>0 indicators → 0.0 reward</li>
+                                            <li>1 indicator → 0.33 reward</li>
+                                            <li>2 indicators → 0.67 reward</li>
+                                            <li>3+ indicators → 1.0 reward</li>
+                                        </ul>
+                                    </div>
+                                    <div class="step-example">
+                                        <h5>📝 Step-by-Step Reasoning Examples</h5>
+                                        <div class="code-block">
+<pre><code class="language-plaintext">HIGH REWARD EXAMPLE (Score: 1.0):
+"&lt;think&gt;
+Step 1: Identify the operation order (PEMDAS)
+Step 2: Calculate 3 × 4 = 12
+Step 3: Add 2 + 12 = 14
+&lt;/think&gt;&lt;answer&gt;14&lt;/answer&gt;"
+→ Found 3 "Step X:" patterns = 1.0 reward
+
+MEDIUM REWARD EXAMPLE (Score: 0.67):
+"&lt;think&gt;
+First, I'll multiply 3 × 4 = 12
+Second, I'll add 2 + 12 = 14
+&lt;/think&gt;&lt;answer&gt;14&lt;/answer&gt;"
+→ Found 2 transition words = 0.67 reward
+
+LOW REWARD EXAMPLE (Score: 0.0):
+"&lt;think&gt;The answer is 14&lt;/think&gt;&lt;answer&gt;14&lt;/answer&gt;"
+→ Found 0 reasoning indicators = 0.0 reward</code></pre>
+                                        </div>
+                                        <p><strong>Implementation Code:</strong></p>
+                                        <div class="code-block">
+<pre><code class="language-python">def reasoning_steps_reward(completions, **kwargs):
+    """Reward function to encourage clear step-by-step reasoning."""
+    pattern = r"(Step \d+:|^\d+\.|\n-|\n\*|First,|Second,|Next,|Finally,)"
+    
+    completion_contents = [completion[0]["content"] for completion in completions]
+    
+    matches = [len(re.findall(pattern, content, re.MULTILINE))
+               for content in completion_contents]
+    
+    # Reward proportional to reasoning steps, maxing at 1.0
+    return [min(1.0, count / 3) for count in matches]</code></pre>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Cosine Scaled Reward -->
+                            <div class="step-card">
+                                <div class="step-content">
+                                    <div class="step-math">
+                                        <h5>📏 Cosine Scaled Reward</h5>
+                                        <p><strong>Length-Aware Reward Formula:</strong></p>
+                                        <p>$$R_{cosine} = \min_{val} + 0.5 \cdot (\max_{val} - \min_{val}) \cdot (1 + \cos(\pi \cdot \frac{length}{\max_{length}}))$$</p>
+                                        
+                                        <p><strong>Adaptive Scaling Logic:</strong></p>
+                                        <ul>
+                                            <li><strong>Correct Answers:</strong> Shorter responses get higher rewards</li>
+                                            <li><strong>Incorrect Answers:</strong> Longer responses get less penalty</li>
+                                            <li><strong>Cosine Function:</strong> Smooth transition from 1.0 (short) to -1.0 (long)</li>
+                                        </ul>
+                                        
+                                        <p><strong>Parameter Ranges:</strong></p>
+                                        <ul>
+                                            <li>Correct: [0.8, 1.0] reward range</li>
+                                            <li>Incorrect: [-0.5, -0.1] penalty range</li>
+                                            <li>Max length: 1000 characters</li>
+                                        </ul>
+                                    </div>
+                                    <div class="step-example">
+                                        <h5>📊 Length-Based Reward Examples</h5>
+                                        <div class="code-block">
+<pre><code class="language-plaintext">CORRECT ANSWER SCENARIOS:
+Short (100 chars): cos(π × 0.1) ≈ 0.95 → Reward ≈ 0.99
+Medium (500 chars): cos(π × 0.5) = 0.0 → Reward = 0.9  
+Long (1000 chars): cos(π × 1.0) = -1.0 → Reward = 0.8
+
+INCORRECT ANSWER SCENARIOS:
+Short (100 chars): cos(π × 0.1) ≈ 0.95 → Penalty ≈ -0.12
+Medium (500 chars): cos(π × 0.5) = 0.0 → Penalty = -0.3
+Long (1000 chars): cos(π × 1.0) = -1.0 → Penalty = -0.5</code></pre>
+                                        </div>
+                                        <p><strong>Implementation Code:</strong></p>
+                                        <div class="code-block">
+<pre><code class="language-python">def get_cosine_scaled_reward(min_value_wrong=-0.5, max_value_wrong=-0.1,
+                            min_value_correct=0.8, max_value_correct=1.0,
+                            max_len=1000):
+    def cosine_scaled_reward(completions, solution, accuracy_rewards, **kwargs):
+        contents = [completion[0]["content"] for completion in completions]
+        rewards = []
+        
+        for content, sol, acc_reward in zip(contents, solution, accuracy_rewards):
+            gen_len = len(content)
+            progress = gen_len / max_len
+            cosine = math.cos(progress * math.pi)
+            
+            if acc_reward > 0.5:  # Correct answer
+                min_val, max_val = min_value_correct, max_value_correct
+            else:  # Incorrect answer
+                min_val, max_val = max_value_wrong, min_value_wrong
+            
+            reward = min_val + 0.5 * (max_val - min_val) * (1.0 + cosine)
+            rewards.append(float(reward))
+        return rewards
+    return cosine_scaled_reward</code></pre>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Repetition Penalty -->
+                            <div class="step-card">
+                                <div class="step-content">
+                                    <div class="step-math">
+                                        <h5>🔄 Repetition Penalty Reward</h5>
+                                        <p><strong>N-gram Diversity Formula:</strong></p>
+                                        <p>$$R_{repetition} = \text{scaling} \times \text{max\_penalty}$$</p>
+                                        <p>$$\text{scaling} = 1 - \frac{\text{unique\_ngrams}}{\text{total\_ngrams}}$$</p>
+                                        
+                                        <p><strong>Diversity Measurement:</strong></p>
+                                        <ul>
+                                            <li><strong>N-gram Size:</strong> 3 (trigrams) for context sensitivity</li>
+                                            <li><strong>Scaling Range:</strong> [0, 1] where 0 = no repetition, 1 = maximum repetition</li>
+                                            <li><strong>Penalty Range:</strong> [0, -0.1] negative rewards for repetition</li>
+                                        </ul>
+                                    </div>
+                                    <div class="step-example">
+                                        <h5>🎯 Repetition Detection Examples</h5>
+                                        <div class="code-block">
+<pre><code class="language-plaintext">HIGH DIVERSITY (Low Penalty):
+"Step 1: multiply first. Step 2: add second. Step 3: verify result."
+→ Trigrams: ["Step 1:", "1: multiply", "multiply first", ...]
+→ Unique: 12, Total: 12 → Scaling: 0.0 → Penalty: 0.0
+
+MEDIUM REPETITION (Medium Penalty):
+"I think I should think about this problem I think carefully"
+→ "I think" appears 3 times
+→ Unique: 8, Total: 10 → Scaling: 0.2 → Penalty: -0.02
+
+HIGH REPETITION (High Penalty):
+"The answer is the answer is the answer is 14"
+→ "the answer" and "answer is" repeat extensively
+→ Unique: 4, Total: 8 → Scaling: 0.5 → Penalty: -0.05</code></pre>
+                                        </div>
+                                        <p><strong>Implementation Code:</strong></p>
+                                        <div class="code-block">
+<pre><code class="language-python">def get_repetition_penalty_reward(ngram_size=3, max_penalty=-0.1):
+    def zipngram(text, ngram_size):
+        """Generate n-grams from text."""
+        words = text.lower().split()
+        return zip(*[words[i:] for i in range(ngram_size)])
+    
+    def repetition_penalty_reward(completions, **kwargs):
+        contents = [completion[0]["content"] for completion in completions]
+        rewards = []
+        
+        for completion in contents:
+            if len(completion.split()) < ngram_size:
+                rewards.append(0.0)
+                continue
+            
+            ngrams = set()
+            total = 0
+            for ng in zipngram(completion, ngram_size):
+                ngrams.add(ng)
+                total += 1
+            
+            scaling = 1 - len(ngrams) / total
+            reward = scaling * max_penalty
+            rewards.append(reward)
+        return rewards
+    return repetition_penalty_reward</code></pre>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Accuracy Reward Implementation -->
+                            <div class="step-card">
+                                <div class="step-content">
+                                    <div class="step-math">
+                                        <h5>🎯 Complete Accuracy Reward Implementation</h5>
+                                        <p><strong>Mathematical Verification Pipeline:</strong></p>
+                                        <ol>
+                                            <li>Parse ground truth using LaTeX extraction</li>
+                                            <li>Extract model answer with normalization</li>
+                                            <li>Perform semantic mathematical comparison</li>
+                                            <li>Handle parsing failures gracefully</li>
+                                        </ol>
+                                    </div>
+                                    <div class="step-example">
+                                        <h5>🔧 Full Implementation Code</h5>
+                                        <div class="code-block">
+<pre><code class="language-python">def accuracy_reward(completions, **kwargs):
+    """
+    Reward function to check if the model's response is mathematically
+    equivalent to the ground truth solution.
+    """
+    contents = [completion[0]["content"] for completion in completions]
+    rewards = []
+    solutions = kwargs.get("solution")
+    
+    for content, sol in zip(contents, solutions):
+        # Parse the ground truth solution
+        gold_parsed = parse(sol, extraction_mode="first_match",
+                          extraction_config=[LatexExtractionConfig()])
+        
+        if gold_parsed:
+            # Parse the model's answer with relaxed normalization
+            answer_parsed = parse(
+                content,
+                extraction_config=[
+                    LatexExtractionConfig(
+                        normalization_config=NormalizationConfig(
+                            nits=False,
+                            malformed_operators=False,
+                            basic_latex=True,
+                            equations=True,
+                            boxed="all",
+                            units=True,
+                        ),
+                        boxed_match_priority=0,
+                        try_extract_without_anchor=False,
+                    )
+                ],
+                extraction_mode="first_match",
+            )
+            
+            # Reward 1.0 if correct, 0.0 if incorrect
+            reward = float(verify(answer_parsed, gold_parsed))
+        else:
+            # Neutral reward if ground truth cannot be parsed
+            reward = 0.5
+            print("Warning: Failed to parse gold solution:", sol)
+        
+        rewards.append(reward)
+    return rewards</code></pre>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Format Reward Implementation -->
+                            <div class="step-card">
+                                <div class="step-content">
+                                    <div class="step-math">
+                                        <h5>📋 Complete Format Reward Implementation</h5>
+                                        <p><strong>Regex Pattern Validation:</strong></p>
+                                        <p>Ensures strict adherence to the &lt;think&gt;...&lt;/think&gt;&lt;answer&gt;...&lt;/answer&gt; format using comprehensive pattern matching.</p>
+                                    </div>
+                                    <div class="step-example">
+                                        <h5>🔧 Full Implementation Code</h5>
+                                        <div class="code-block">
+<pre><code class="language-python">def format_reward(completions, **kwargs):
+    """
+    Reward function to check if the completion has the correct format:
+    &lt;think&gt;...&lt;/think&gt; &lt;answer&gt;...&lt;/answer&gt;.
+    """
+    # Define the regex pattern for the desired format
+    pattern = r"^&lt;think&gt;.*?&lt;/think&gt;\s*&lt;answer&gt;.*?&lt;/answer&gt;$"
+    
+    # Extract the content from each completion
+    completion_contents = [completion[0]["content"] for completion in completions]
+    
+    # Check if each completion matches the pattern
+    matches = [re.match(pattern, content, re.DOTALL | re.MULTILINE)
+               for content in completion_contents]
+    
+    # Reward 1.0 for correct format, 0.0 otherwise
+    return [1.0 if match else 0.0 for match in matches]</code></pre>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Data Preprocessing Section -->
+            <section id="data-preprocessing" class="section">
+                <h2 class="section-title">Data Preprocessing Pipeline</h2>
+                
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-icon" style="background: var(--gradient-2);">🔄</div>
+                        <h3 class="card-title">Dataset Transformation</h3>
+                    </div>
+                    
+                    <div class="subsection">
+                        <h4>Conversation Format Conversion</h4>
+                        <div class="code-block">
+<pre><code class="language-python"># Function to structure the training data
+def make_conversation(example):
+    """Convert dataset examples into conversation format."""
+    return {
+        "prompt": [
+            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "user", "content": example["problem"]},
+        ],
+    }
+
+# Load and prepare dataset
+def load_math_dataset():
+    """Load and prepare the mathematics dataset."""
+    dataset = load_dataset(
+        "AI-MO/NuminaMath-TIR",
+        name="default",
+        split=['train', 'test']
+    )
+    
+    # Convert splits into dictionary
+    dataset = {
+        'train': dataset[0],
+        'test': dataset[1]
+    }
+    
+    # Apply conversation format
+    for split in dataset:
+        dataset[split] = dataset[split].map(make_conversation)
+        
+        # Remove 'messages' column if exists
+        if "messages" in dataset[split].column_names:
+            dataset[split] = dataset[split].remove_columns("messages")
+    
+    return dataset
+
+# Load our training dataset
+dataset = load_math_dataset()
+print(f"Train set size: {len(dataset['train'])}")
+print(f"Test set size: {len(dataset['test'])}")</code></pre>
+                        </div>
+                    </div>
+
+                    <div class="subsection">
+                        <h4>Dataset Validation</h4>
+                        <div class="code-block">
+<pre><code class="language-python">def validate_dataset(dataset):
+    """Perform basic validation checks on the dataset."""
+    required_fields = ["problem", "prompt"]
+    
+    for split in ['train', 'test']:
+        print(f"\nValidating {split} split:")
+        
+        fields = dataset[split].column_names
+        missing = [field for field in required_fields if field not in fields]
+        
+        if missing:
+            print(f"Warning: Missing fields: {missing}")
+        else:
+            print("✓ All required fields present")
+        
+        sample = dataset[split][0]
+        messages = sample['prompt']
+        
+        if (len(messages) >= 2 and
+            messages[0]['role'] == 'system' and
+            messages[1]['role'] == 'user'):
+            print("✓ Prompt format is correct")
+        else:
+            print("Warning: Incorrect prompt format")
+
+# Validate dataset
+validate_dataset(dataset)</code></pre>
+                        </div>
+                    </div>
+                </div>
+            </section>
+                                            <li>2 indicators → 0.67 reward</li>
+                                            <li>3+ indicators → 1.0 reward (maximum)</li>
+                                        </ul>
+                                    </div>
+                                    <div class="step-example">
+                                        <h5>📝 Step-by-Step Analysis</h5>
+                                        <div class="code-block">
+<pre><code class="language-plaintext">High Reward Example (Score: 1.0):
+"&lt;think&gt;
+Step 1: Identify the operation order (PEMDAS)
+Step 2: Calculate multiplication first: 3 × 4 = 12  
+Step 3: Add the remaining term: 2 + 12 = 14
+Finally, verify the result makes sense.
+&lt;/think&gt;&lt;answer&gt;14&lt;/answer&gt;"
+
+Indicators found: ["Step 1:", "Step 2:", "Step 3:", "Finally,"] = 4 indicators
+Reward: min(1.0, 4/3) = 1.0
+
+Low Reward Example (Score: 0.33):
+"&lt;think&gt;Just multiply then add to get 14&lt;/think&gt;&lt;answer&gt;14&lt;/answer&gt;"
+
+Indicators found: [] = 0 indicators  
+Reward: min(1.0, 0/3) = 0.0</code></pre>
+                                        </div>
+                                        <p><strong>Learning Objective:</strong> Encourages explicit step-by-step reasoning, making the model's thought process more transparent and verifiable.</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Cosine Scaled Reward -->
+                            <div class="step-card">
+                                <div class="step-content">
+                                    <div class="step-math">
+                                        <h5>📏 Cosine Scaled Reward</h5>
+                                        <p><strong>Length-Based Scaling:</strong></p>
+                                        <p>$$\text{progress} = \frac{\text{length}(\text{response})}{\text{max\_length}}$$</p>
+                                        <p>$$\text{cosine\_factor} = \cos(\text{progress} \times \pi)$$</p>
+                                        <p>$$R_{cosine} = \text{min\_value} + 0.5 \times (\text{max\_value} - \text{min\_value}) \times (1.0 + \text{cosine\_factor})$$</p>
+                                        
+                                        <p><strong>Adaptive Scaling by Correctness:</strong></p>
+                                        <ul>
+                                            <li><strong>Correct answers:</strong> Shorter = higher reward (conciseness)</li>
+                                            <li><strong>Incorrect answers:</strong> Longer = less penalty (effort recognition)</li>
+                                        </ul>
+                                    </div>
+                                    <div class="step-example">
+                                        <h5>📊 Length Impact Analysis</h5>
+                                        <div class="code-block">
+<pre><code class="language-plaintext">Configuration:
+- max_length = 1000
+- correct_range = [0.8, 1.0]  
+- incorrect_range = [-0.5, -0.1]
+
+Correct Answer Examples:
+- Short response (100 chars): progress=0.1, cosine=0.95, reward≈0.99
+- Long response (800 chars): progress=0.8, cosine=-0.81, reward≈0.82
+
+Incorrect Answer Examples:  
+- Short response (100 chars): progress=0.1, cosine=0.95, reward≈-0.12
+- Long response (800 chars): progress=0.8, cosine=-0.81, reward≈-0.46</code></pre>
+                                        </div>
+                                        <p><strong>Behavioral Shaping:</strong> Promotes concise correct solutions while being more forgiving of lengthy incorrect attempts that show reasoning effort.</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Repetition Penalty -->
+                            <div class="step-card">
+                                <div class="step-content">
+                                    <div class="step-math">
+                                        <h5>🔄 Repetition Penalty Reward</h5>
+                                        <p><strong>N-gram Diversity Measurement:</strong></p>
+                                        <p>$$\text{scaling} = 1 - \frac{\text{unique\_ngrams}}{\text{total\_ngrams}}$$</p>
+                                        <p>$$R_{repetition} = \text{scaling} \times \text{max\_penalty}$$</p>
+                                        
+                                        <p><strong>Diversity Analysis:</strong></p>
+                                        <ul>
+                                            <li>Extract all n-grams (default: trigrams)</li>
+                                            <li>Count unique vs. total occurrences</li>
+                                            <li>Higher repetition → larger penalty</li>
+                                            <li>More diverse language → smaller penalty</li>
+                                        </ul>
+                                    </div>
+                                    <div class="step-example">
+                                        <h5>🎯 Repetition Detection Example</h5>
+                                        <div class="code-block">
+<pre><code class="language-plaintext">Diverse Response (Low Penalty):
+"Step 1: Identify order of operations. Step 2: Calculate multiplication first. Step 3: Add remaining terms."
+
+Trigrams: ["Step 1:", "1: Identify", "Identify order", "order of", "of operations", "Step 2:", "2: Calculate", ...]
+Unique: 15, Total: 15
+Scaling: 1 - 15/15 = 0.0
+Penalty: 0.0 × (-0.1) = 0.0
+
+Repetitive Response (High Penalty):  
+"Calculate calculate calculate the result result result to get get get the answer answer answer"
+
+Trigrams: ["Calculate calculate", "calculate calculate", "calculate the", "the result", "result result", ...]
+Unique: 8, Total: 12  
+Scaling: 1 - 8/12 = 0.33
+Penalty: 0.33 × (-0.1) = -0.033</code></pre>
+                                        </div>
+                                        <p><strong>Quality Control:</strong> Prevents the model from getting stuck in repetitive loops, encouraging varied and natural language use in reasoning.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="step-navigation">
+                            <button class="nav-button" id="reward-prev-btn" onclick="changeRewardStep(-1)" disabled>Previous</button>
+                            <div class="step-indicators" id="reward-step-indicators">
+                                <div class="step-dot active" onclick="goToRewardStep(0)"></div>
+                                <div class="step-dot" onclick="goToRewardStep(1)"></div>
+                                <div class="step-dot" onclick="goToRewardStep(2)"></div>
+                                <div class="step-dot" onclick="goToRewardStep(3)"></div>
+                                <div class="step-dot" onclick="goToRewardStep(4)"></div>
+                            </div>
+                            <button class="nav-button" id="reward-next-btn" onclick="changeRewardStep(1)">Next</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="subsection">
+                    <h3 class="subsection-title">GRPO Training Configuration</h3>
+                    
+                    <div class="card">
+                        <h4>Training Hyperparameters</h4>
+                        <div class="code-block">
+<pre><code class="language-python">@dataclass
+class GRPOScriptArguments:
+    reward_funcs: List[str] = ["accuracy", "format", "reasoning_steps", "cosine", "repetition_penalty"]
+    cosine_min_value_wrong: float = -0.5
+    cosine_max_value_wrong: float = -0.1  
+    cosine_min_value_correct: float = 0.8
+    cosine_max_value_correct: float = 1.0
+    cosine_max_len: int = 1000
+    repetition_n_grams: int = 3
+    repetition_max_penalty: float = -0.1
+
+training_args = TrainingArguments(
+    output_dir="./qwen-grpo-training",
+    num_train_epochs=1,
+    per_device_train_batch_size=8,
+    gradient_accumulation_steps=2,
+    learning_rate=5e-5,
+    warmup_ratio=0.1,
+    weight_decay=0.01,
+    logging_steps=1,
+    save_strategy="steps",
+    save_steps=5,
+    save_total_limit=2,
+    dataloader_num_workers=2,
+    seed=42,
+    bf16=True,
+    gradient_checkpointing=True,
+    report_to="none",
+    remove_unused_columns=False,
+)</code></pre>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <h4>GRPO Training Loop</h4>
+                        <div class="code-block">
+<pre><code class="language-python"># Initialize GRPO Trainer
+grpo_config = GRPOConfig(**training_args.to_dict())
+
+grpo_trainer = GRPOTrainer(
+    model=model,
+    reward_funcs=reward_functions,
+    args=grpo_config,
+    train_dataset=dataset['train'],
+    eval_dataset=dataset['test'],
+    callbacks=callbacks
+)
+
+# Start training
+print("Starting GRPO training...")
+train_result = grpo_trainer.train()
+
+# Save the trained model
+TRAINED_MODEL_PATH = "data/Qwen-GRPO-training"
+tokenizer.save_pretrained(TRAINED_MODEL_PATH)
+grpo_trainer.save_model(TRAINED_MODEL_PATH)
+print(f"GRPO trained model saved to {TRAINED_MODEL_PATH}")
+
+# Test the trained model
+def test_trained_model(user_input: str):
+    messages = [
+        {"role": "system", "content": SYSTEM_PROMPT},
+        {"role": "user", "content": user_input}
+    ]
+    
+    text = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
+    inputs = tokenizer(text, return_tensors="pt").to(device)
+    
+    outputs = trained_model.generate(
+        **inputs,
+        max_new_tokens=200,
+        do_sample=True,
+        temperature=0.7
+    )
+    
+    response = tokenizer.decode(outputs[0], skip_special_tokens=True)
+    return response
+
+# Test example
+test_input = "What is 2 + 3 * 4?"
+response = test_trained_model(test_input)
+print(f"Input: {test_input}")
+print(f"Response: {response}")</code></pre>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Cold Start Data Generation -->
+            <section id="cold-start" class="section">
+                <h2 class="section-title">Cold Start Data Generation</h2>
+                
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-icon" style="background: var(--gradient-2);">❄️</div>
+                        <h3 class="card-title">Addressing R1 Zero Limitations</h3>
+                    </div>
+                    
+                    <div class="highlight-box">
+                        <h4>R1 Zero Problems</h4>
+                        <ul>
+                            <li><strong>Messy Reasoning:</strong> Hard-to-follow thought processes in &lt;think&gt; tags</li>
+                            <li><strong>Language Mixing:</strong> Inconsistent language usage in multilingual contexts</li>
+                            <li><strong>Structural Issues:</strong> Inconsistent reasoning organization</li>
+                        </ul>
+                    </div>
+
+                    <div class="subsection">
+                        <h4>Few-shot Prompting with Long CoT</h4>
+                        <div class="code-block">
+<pre><code class="language-python"># Generate response function
+def generate_response(prompt_text):
+    messages = [
+        {"role": "system", "content": "You are a helpful assistant that provides step-by-step solutions."},
+        {"role": "user", "content": prompt_text}
+    ]
+    text = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
+    inputs = tokenizer(text, return_tensors="pt").to(model.device)
+    outputs = model.generate(**inputs, max_new_tokens=200, do_sample=False)
+    response = tokenizer.decode(outputs[0], skip_special_tokens=True)
+    return response.split("<|im_start|>assistant\n")[-1].strip()
+
+# Few-shot examples
+few_shot_prompt = """
+Problem: What's the square root of 9 plus 5?
+Solution: <|special_token|> First, find the square root of 9, which is 3. Then, add 5 to 3. 3 + 5 equals 8. <|special_token|> Summary: The answer is 8.
+
+Problem: Train travels at 60 mph for 2 hours, how far?
+Solution: <|special_token|> Use the formula: Distance = Speed times Time. Speed is 60 mph, Time is 2 hours. Distance = 60 * 2 = 120 miles. <|special_token|> Summary: Train travels 120 miles.
+
+Problem: What is 2 + 3 * 4?
+Solution:
+"""
+
+# Generate structured response
+target_problem = "What is 2 + 3 * 4?"
+model_response = generate_response(few_shot_prompt + target_problem)
+print("Few-shot CoT Response:")
+print(model_response)</code></pre>
+                        </div>
+                    </div>
+
+                    <div class="subsection">
+                        <h4>Direct Prompting</h4>
+                        <div class="code-block">
+<pre><code class="language-python"># Direct prompting approach
+direct_prompt = """
+Problem: Solve this, show reasoning step-by-step, and verify:
+What is 2 + 3 * 4?
+"""
+
+direct_response = generate_response(direct_prompt)
+print("Direct Prompting Response:")
+print(direct_response)</code></pre>
+                        </div>
+                    </div>
+
+                    <div class="subsection">
+                        <h4>Post-Processing Refinement</h4>
+                        <div class="code-block">
+<pre><code class="language-python"># Refine messy R1 Zero outputs
+def refine_output(messy_text):
+    """Refine messy reasoning output into structured format."""
+    try:
+        think_content = messy_text.split("<think>")[1].split("</think>")[0].strip()
+        answer_content = messy_text.split("<answer>")[1].split("</answer>")[0].strip()
+        
+        # Clean up the reasoning
+        cleaned_reasoning = think_content.replace('ummm...', '').replace('...', '').strip()
+        
+        refined_text = f"""<|special_token|> Reasoning: {cleaned_reasoning.capitalize()}.
+<|special_token|> Summary: The answer is {answer_content}."""
+        return refined_text
+    except:
+        return messy_text
+
+# Example refinement
+messy_output = "<think>  ummm... multiply 3 and 4... get 12... then add 2...</think>\n<answer> 14 </answer>"
+refined = refine_output(messy_output)
+
+print("Before refinement:")
+print(messy_output)
+print("\nAfter refinement:")
+print(refined)</code></pre>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- SFT Training -->
+            <section id="sft" class="section">
+                <h2 class="section-title">Supervised Fine-Tuning (SFT)</h2>
+                
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-icon" style="background: var(--gradient-3);">📚</div>
+                        <h3 class="card-title">SFT Stage 1: Structured Reasoning</h3>
+                    </div>
+                    
+                    <div class="subsection">
+                        <h4>SFT Configuration</h4>
+                        <div class="code-block">
+<pre><code class="language-python"># SFT Training Configuration
+OUTPUT_DIR_SFT = "data/Qwen-SFT-training"
+os.makedirs(OUTPUT_DIR_SFT, exist_ok=True)
+
+sft_training_args = TrainingArguments(
+    output_dir=OUTPUT_DIR_SFT,
+    overwrite_output_dir=True,
+    num_train_epochs=1,
+    per_device_train_batch_size=8,
+    per_device_eval_batch_size=16,
+    gradient_accumulation_steps=2,
+    learning_rate=2e-5,  # Lower learning rate for SFT
+    warmup_ratio=0.1,
+    weight_decay=0.01,
+    logging_steps=10,
+    evaluation_strategy="no",
+    save_strategy="steps",
+    save_steps=50,
+    save_total_limit=2,
+    dataloader_num_workers=2,
+    seed=42,
+    bf16=True,
+    push_to_hub=False,
+    gradient_checkpointing=True,
+    report_to="none",
+)</code></pre>
+                        </div>
+                    </div>
+
+                    <div class="subsection">
+                        <h4>SFT Training Loop</h4>
+                        <div class="code-block">
+<pre><code class="language-python"># Load high-quality reasoning dataset
+dataset_sft = load_dataset("HuggingFaceH4/Bespoke-Stratos-17k", split='train')
+
+# Initialize model for SFT
+model_sft = AutoModelForCausalLM.from_pretrained(
+    MODEL_NAME,
+    trust_remote_code=True,
+    torch_dtype=torch.bfloat16
+)
+
+# Initialize SFT Trainer
+sft_trainer = SFTTrainer(
+    model=model_sft,
+    train_dataset=dataset_sft,
+    tokenizer=tokenizer,
+    args=sft_training_args,
+)
+
+# Start SFT training
+print("Starting SFT training...")
+sft_result = sft_trainer.train()
+
+# Save SFT model
+TRAINED_SFT_PATH = "data/Qwen-SFT-training"
+tokenizer.save_pretrained(TRAINED_SFT_PATH)
+sft_trainer.save_model(TRAINED_SFT_PATH)
+print(f"SFT trained model saved to {TRAINED_SFT_PATH}")</code></pre>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Advanced Stages -->
+            <section id="advanced-stages" class="section">
+                <h2 class="section-title">Advanced Training Stages</h2>
+                
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-icon" style="background: var(--gradient-1);">🎯</div>
+                        <h3 class="card-title">Reasoning-Oriented RL & Final Stages</h3>
+                    </div>
+                    
+                    <div class="subsection">
+                        <h4>Reasoning-Oriented Reinforcement Learning</h4>
+                        <p>After SFT, the model undergoes additional RL training with enhanced reward functions:</p>
+                        
+                        <div class="highlight-box">
+                            <h5>Enhanced Reward Components</h5>
+                            <ul>
+                                <li><strong>Language Consistency:</strong> Ensures reasoning and answers use the same language as the question</li>
+                                <li><strong>Reasoning Quality:</strong> Evaluates the depth and clarity of step-by-step explanations</li>
+                                <li><strong>Improved Accuracy:</strong> More sophisticated mathematical verification</li>
+                            </ul>
+                        </div>
+                        
+                        <div class="code-block">
+<pre><code class="language-python"># Conceptual implementation of language consistency reward
+def language_consistency_reward(completions, questions, **kwargs):
+    """Reward function to ensure consistent language usage."""
+    rewards = []
+    
+    for completion, question in zip(completions, questions):
+        content = completion[0]["content"]
+        
+        # Detect languages (simplified)
+        question_lang = detect_language(question)
+        response_lang = detect_language(content)
+        
+        # Reward consistency
+        if question_lang == response_lang:
+            rewards.append(1.0)
+        else:
+            rewards.append(0.0)  # Penalty for language mixing
+    
+    return rewards
+
+# Enhanced GRPO training with language consistency
+enhanced_reward_functions = [
+    accuracy_reward,
+    format_reward,
+    reasoning_steps_reward,
+    language_consistency_reward,
+    get_cosine_scaled_reward(),
+    get_repetition_penalty_reward()
+]</code></pre>
+                        </div>
+                    </div>
+
+                    <div class="subsection">
+                        <h4>Rejection Sampling</h4>
+                        <p>High-quality reasoning data is generated through rejection sampling:</p>
+                        
+                        <div class="code-block">
+<pre><code class="language-python"># Conceptual rejection sampling implementation
+def rejection_sampling(model, tokenizer, problems, num_samples=10, quality_threshold=0.8):
+    """Generate high-quality reasoning examples through rejection sampling."""
+    high_quality_examples = []
+    
+    for problem in problems:
+        best_response = None
+        best_score = 0
+        
+        # Generate multiple responses
+        for _ in range(num_samples):
+            response = generate_response(problem)
+            
+            # Evaluate quality (simplified)
+            score = evaluate_response_quality(response, problem)
+            
+            if score > best_score and score >= quality_threshold:
+                best_response = response
+                best_score = score
+        
+        if best_response:
+            high_quality_examples.append({
+                'problem': problem,
+                'response': best_response,
+                'quality_score': best_score
+            })
+    
+    return high_quality_examples
+
+# Use rejection sampling to create refined dataset
+refined_data = rejection_sampling(model, tokenizer, sample_problems)</code></pre>
+                        </div>
+                    </div>
+
+                    <div class="subsection">
+                        <h4>SFT Stage 2: Helpfulness & Harmlessness</h4>
+                        <p>The final training stage balances reasoning capabilities with general AI assistant behavior:</p>
+                        
+                        <div class="code-block">
+<pre><code class="language-python"># Final stage training configuration
+final_training_args = TrainingArguments(
+    output_dir="data/Qwen-R1-final",
+    num_train_epochs=1,
+    per_device_train_batch_size=4,  # Smaller batch for diverse data
+    learning_rate=1e-5,  # Very low learning rate for fine-tuning
+    warmup_ratio=0.05,
+    weight_decay=0.01,
+    logging_steps=5,
+    save_strategy="steps",
+    save_steps=25,
+    evaluation_strategy="steps",
+    eval_steps=25,
+    seed=42,
+    bf16=True,
+    gradient_checkpointing=True,
+    report_to="none",
+)
+
+# Multi-objective reward function for final stage
+def helpfulness_harmlessness_reward(completions, **kwargs):
+    """Reward function balancing helpfulness and harmlessness."""
+    rewards = []
+    
+    for completion in completions:
+        content = completion[0]["content"]
+        
+        # Evaluate helpfulness (simplified)
+        helpfulness_score = evaluate_helpfulness(content)
+        
+        # Evaluate harmlessness (simplified)
+        harmlessness_score = evaluate_harmlessness(content)
+        
+        # Combine scores
+        combined_reward = 0.6 * helpfulness_score + 0.4 * harmlessness_score
+        rewards.append(combined_reward)
+    
+    return rewards</code></pre>
+                        </div>
+                    </div>
+
+                    <div class="subsection">
+                        <h4>Knowledge Distillation</h4>
+                        <p>Create smaller, more efficient models through knowledge distillation:</p>
+                        
+                        <div class="code-block">
+<pre><code class="language-python"># Knowledge distillation setup
+def distillation_training(teacher_model, student_model, dataset, temperature=3.0):
+    """Distill knowledge from large teacher to smaller student model."""
+    
+    class DistillationTrainer(SFTTrainer):
+        def compute_loss(self, model, inputs, return_outputs=False):
+            # Student forward pass
+            student_outputs = model(**inputs)
+            student_logits = student_outputs.logits
+            
+            # Teacher forward pass (no gradient)
+            with torch.no_grad():
+                teacher_outputs = teacher_model(**inputs)
+                teacher_logits = teacher_outputs.logits
+            
+            # Distillation loss
+            distill_loss = F.kl_div(
+                F.log_softmax(student_logits / temperature, dim=-1),
+                F.softmax(teacher_logits / temperature, dim=-1),
+                reduction='batchmean'
+            ) * (temperature ** 2)
+            
+            # Standard cross-entropy loss
+            ce_loss = F.cross_entropy(
+                student_logits.view(-1, student_logits.size(-1)),
+                inputs['labels'].view(-1)
+            )
+            
+            # Combined loss
+            total_loss = 0.7 * distill_loss + 0.3 * ce_loss
+            
+            return (total_loss, student_outputs) if return_outputs else total_loss
+    
+    # Initialize distillation trainer
+    distill_trainer = DistillationTrainer(
+        model=student_model,
+        train_dataset=dataset,
+        tokenizer=tokenizer,
+        args=final_training_args,
+    )
+    
+    return distill_trainer
+
+# Example usage
+# teacher_model = load_trained_r1_model()
+# student_model = load_smaller_base_model()
+# distill_trainer = distillation_training(teacher_model, student_model, dataset)
+# distill_trainer.train()</code></pre>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Results and Evaluation -->
+            <section id="results" class="section">
+                <h2 class="section-title">Results & Evaluation</h2>
+                
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-icon" style="background: var(--success-color);">🏆</div>
+                        <h3 class="card-title">Training Outcomes</h3>
+                    </div>
+                    
+                    <div class="subsection">
+                        <h4>DeepSeek R1 Achievements</h4>
+                        <div class="highlight-box">
+                            <h5>Key Improvements Over R1 Zero</h5>
+                            <ul>
+                                <li><strong>Clear Reasoning:</strong> Structured, readable thought processes in &lt;think&gt; tags</li>
+                                <li><strong>Language Consistency:</strong> Unified language usage throughout responses</li>
+                                <li><strong>Mathematical Accuracy:</strong> High performance on reasoning benchmarks</li>
+                                <li><strong>Assistant Behavior:</strong> Helpful, harmless, and honest responses</li>
+                                <li><strong>Scalability:</strong> Knowledge distillation enables deployment of smaller models</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="subsection">
+                        <h4>Evaluation Metrics</h4>
+                        <div class="code-block">
+<pre><code class="language-python"># Comprehensive evaluation function
+def evaluate_r1_model(model, tokenizer, test_dataset):
+    """Evaluate the trained R1 model on multiple metrics."""
+    
+    results = {
+        'accuracy': 0,
+        'format_compliance': 0,
+        'reasoning_quality': 0,
+        'language_consistency': 0,
+        'response_length': [],
+        'reasoning_steps': []
+    }
+    
+    for example in test_dataset:
+        # Generate response
+        response = generate_response(example['problem'])
+        
+        # Evaluate accuracy
+        accuracy = evaluate_mathematical_accuracy(response, example['solution'])
+        results['accuracy'] += accuracy
+        
+        # Evaluate format compliance
+        format_score = evaluate_format_compliance(response)
+        results['format_compliance'] += format_score
+        
+        # Evaluate reasoning quality
+        reasoning_score = evaluate_reasoning_quality(response)
+        results['reasoning_quality'] += reasoning_score
+        
+        # Track response metrics
+        results['response_length'].append(len(response))
+        results['reasoning_steps'].append(count_reasoning_steps(response))
+    
+    # Calculate averages
+    n_examples = len(test_dataset)
+    results['accuracy'] /= n_examples
+    results['format_compliance'] /= n_examples
+    results['reasoning_quality'] /= n_examples
+    
+    return results
+
+# Example evaluation
+# evaluation_results = evaluate_r1_model(trained_model, tokenizer, test_dataset)
+# print("Evaluation Results:", evaluation_results)</code></pre>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Conclusion -->
+            <section id="conclusion" class="section">
+                <h2 class="section-title">Conclusion</h2>
+                
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-icon" style="background: var(--gradient-2);">🎓</div>
+                        <h3 class="card-title">Training Pipeline Summary</h3>
+                    </div>
+                    
+                    <div class="success-box">
+                        <h4>Complete Implementation Achieved</h4>
+                        <p>This guide provides a comprehensive, end-to-end implementation of the DeepSeek R1 training methodology, including:</p>
+                        <ul>
+                            <li>Multi-dimensional reward system with 5 specialized functions</li>
+                            <li>GRPO algorithm for efficient reinforcement learning</li>
+                            <li>Cold start data generation techniques</li>
+                            <li>Supervised fine-tuning for structured reasoning</li>
+                            <li>Advanced RL stages with language consistency</li>
+                            <li>Knowledge distillation for model deployment</li>
+                        </ul>
+                    </div>
+
+                    <div class="subsection">
+                        <h4>Key Takeaways</h4>
+                        <ol>
+                            <li><strong>Iterative Improvement:</strong> R1 training is a multi-stage process, each addressing specific limitations</li>
+                            <li><strong>Reward Engineering:</strong> Sophisticated reward functions are crucial for shaping desired behaviors</li>
+                            <li><strong>Data Quality:</strong> High-quality reasoning examples are essential for effective learning</li>
+                            <li><strong>Computational Efficiency:</strong> GRPO reduces training costs compared to traditional RL approaches</li>
+                            <li><strong>Scalability:</strong> Knowledge distillation enables practical deployment of reasoning models</li>
+                        </ol>
+                    </div>
+
+                    <div class="subsection">
+                        <h4>Future Directions</h4>
+                        <div class="highlight-box">
+                            <h5>Potential Improvements</h5>
+                            <ul>
+                                <li>Integration with larger base models (7B, 13B, 70B parameters)</li>
+                                <li>Domain-specific reasoning specialization (code, mathematics, science)</li>
+                                <li>Multi-modal reasoning capabilities</li>
+                                <li>Improved evaluation metrics for reasoning quality</li>
+                                <li>Real-time reasoning optimization</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="warning-box">
+                        <h4>Important Considerations</h4>
+                        <ul>
+                            <li><strong>Computational Requirements:</strong> Training requires significant GPU resources</li>
+                            <li><strong>Data Quality:</strong> Results heavily depend on training data quality</li>
+                            <li><strong>Hyperparameter Sensitivity:</strong> Careful tuning of reward function parameters is crucial</li>
+                            <li><strong>Evaluation Complexity:</strong> Reasoning quality assessment remains challenging</li>
+                        </ul>
+                    </div>
+                </div>
+            </section>
+    warmup_ratio=0.1,
+    weight_decay=0.01,
+    bf16=True,
+    gradient_checkpointing=True
+)</code></pre>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="warning-box">
+                    <h4>R1 Zero Limitations Discovered</h4>
+                    <p><strong>Performance Achievements:</strong> R1 Zero demonstrated impressive reasoning capabilities, achieving performance comparable to OpenAI-01-0912 on mathematical benchmarks like AIME 2024.</p>
+                    
+                    <p><strong>Critical Issues Identified:</strong></p>
+                    <ul>
+                        <li><strong>Messy Reasoning:</strong> Content within &lt;think&gt; tags was often unstructured and difficult to follow</li>
+                        <li><strong>Language Mixing:</strong> Multilingual queries resulted in inconsistent language usage within responses</li>
+                        <li><strong>Inconsistent Structure:</strong> Reasoning patterns varied significantly across similar problems</li>
+                    </ul>
+                    
+                    <p>These limitations motivated the development of the full R1 training pipeline with supervised fine-tuning stages.</p>
+                </div>
+            </section>
+
+            <!-- Cold Start Data Section -->
+            <section id="cold-start" class="section">
+                <h2 class="section-title">Cold Start Data Generation</h2>
+                
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-icon" style="background: var(--gradient-3);">❄️</div>
+                        <h3 class="card-title">High-Quality Reasoning Examples</h3>
+                    </div>
+                    
+                    <p>To address R1 Zero's limitations, the research team developed sophisticated methods for generating high-quality reasoning examples. This "cold start" data serves as the foundation for supervised fine-tuning, teaching the model proper reasoning structure and consistency.</p>
+                </div>
+
+                <div class="subsection">
+                    <h3 class="subsection-title">Three-Pronged Data Generation Strategy</h3>
+                    
+                    <div class="interactive-section">
+                        <h4>Cold Start Methodologies</h4>
+                        <div id="coldstart-steps">
+                            <!-- Few-shot Prompting -->
+                            <div class="step-card">
+                                <div class="step-content">
+                                    <div class="step-math">
+                                        <h5>🎯 Few-Shot Prompting with Long CoT</h5>
+                                        <p><strong>Methodology:</strong></p>
+                                        <ul>
+                                            <li>Provide 2-3 exemplar problems with detailed solutions</li>
+                                            <li>Demonstrate desired reasoning structure and depth</li>
+                                            <li>Use special tokens to delineate reasoning sections</li>
+                                            <li>Show step-by-step problem decomposition</li>
+                                        </ul>
+                                        
+                                        <p><strong>Template Structure:</strong></p>
+                                        <div class="code-block">
+<pre><code class="language-plaintext">Problem: [Example 1]
+Solution: &lt;|special_token|&gt; [Detailed reasoning] &lt;|special_token|&gt; Summary: [Answer]
+
+Problem: [Example 2]  
+Solution: &lt;|special_token|&gt; [Detailed reasoning] &lt;|special_token|&gt; Summary: [Answer]
+
+Problem: [Target Problem]
+Solution:</code></pre>
+                                        </div>
+                                    </div>
+                                    <div class="step-example">
+                                        <h5>📚 Few-Shot Example Implementation</h5>
+                                        <div class="code-block">
+<pre><code class="language-plaintext">Problem: What's the square root of 9 plus 5?
+Solution: &lt;|special_token|&gt; First, find the square root of 9, which is 3. Then, add 5 to 3. 3 + 5 equals 8. &lt;|special_token|&gt; Summary: The answer is 8.
+
+Problem: Train travels at 60 mph for 2 hours, how far?
+Solution: &lt;|special_token|&gt; Use the formula: Distance = Speed × Time. Speed is 60 mph, Time is 2 hours. Distance = 60 × 2 = 120 miles. &lt;|special_token|&gt; Summary: The answer is 120 miles.
+
+Problem: What is 2 + 3 × 4?
+Solution: &lt;|special_token|&gt; To solve 2 + 3 × 4, we need to follow the order of operations (PEMDAS/BODMAS). Multiplication should be performed before addition.
+Step 1: Multiply 3 by 4, which equals 12.
+Step 2: Add 2 to the result from Step 1: 2 + 12 = 14.
+&lt;|special_token|&gt; Summary: The answer is 14.</code></pre>
+                                        </div>
+                                        <p><strong>Learning Outcome:</strong> The model learns to structure responses with clear reasoning boundaries and systematic problem-solving approaches.</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Direct Prompting -->
+                            <div class="step-card">
+                                <div class="step-content">
+                                    <div class="step-math">
+                                        <h5>🎪 Direct Prompting Strategy</h5>
+                                        <p><strong>Explicit Instruction Approach:</strong></p>
+                                        <ul>
+                                            <li>Directly request step-by-step reasoning</li>
+                                            <li>Ask for verification of the solution</li>
+                                            <li>Encourage explanation of methodology</li>
+                                            <li>Prompt for self-reflection on answer quality</li>
+                                        </ul>
+                                        
+                                        <p><strong>Prompt Engineering Principles:</strong></p>
+                                        <ul>
+                                            <li>Clear directive language</li>
+                                            <li>Explicit formatting requirements</li>
+                                            <li>Verification step inclusion</li>
+                                            <li>Reasoning transparency emphasis</li>
+                                        </ul>
+                                    </div>
+                                    <div class="step-example">
+                                        <h5>🎯 Direct Prompting Example</h5>
+                                        <div class="code-block">
+<pre><code class="language-plaintext">Prompt:
+"Problem: Solve this, show reasoning step-by-step, and verify:
+What is 2 + 3 × 4?"
+
+Model Response:
+"Reasoning: To solve 2 + 3 × 4, I need to follow the order of operations, which states that multiplication should be done before addition.
+
+Step 1: Multiply 3 by 4, which equals 12.
+Step 2: Add 2 to the result from Step 1: 2 + 12 = 14.
+
+Verification: To verify the answer, I can double-check the order of operations and the calculations. Multiplication is indeed performed before addition, and the calculations are correct.
+
+Summary: The answer is 14."</code></pre>
+                                        </div>
+                                        <p><strong>Advantage:</strong> Direct prompting produces comprehensive outputs with built-in verification, teaching the model to be self-critical and thorough in its reasoning process.</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Post-processing Refinement -->
+                            <div class="step-card">
+                                <div class="step-content">
+                                    <div class="step-math">
+                                        <h5>🔧 Post-Processing Refinement</h5>
+                                        <p><strong>Human-in-the-Loop Enhancement:</strong></p>
+                                        <ul>
+                                            <li>Use R1 Zero outputs as raw material</li>
+                                            <li>Human annotators clean and structure responses</li>
+                                            <li>Correct mathematical errors and logical gaps</li>
+                                            <li>Standardize formatting and language consistency</li>
+                                        </ul>
+                                        
+                                        <p><strong>Refinement Process:</strong></p>
+                                        <ol>
+                                            <li>Extract reasoning content from &lt;think&gt; tags</li>
+                                            <li>Identify and correct errors or unclear steps</li>
+                                            <li>Restructure into clear, logical progression</li>
+                                            <li>Apply consistent formatting standards</li>
+                                        </ol>
+                                    </div>
+                                    <div class="step-example">
+                                        <h5>✨ Refinement Transformation</h5>
+                                        <div class="code-block">
+<pre><code class="language-plaintext">Before (Raw R1 Zero Output):
+"&lt;think&gt; ummm... multiply 3 and 4... get 12... then add 2...&lt;/think&gt;
+&lt;answer&gt; 14 &lt;/answer&gt;"
+
+After (Human Refined):
+"&lt;think&gt;
+To solve this problem, I need to apply the order of operations (PEMDAS).
+
+Step 1: Identify operations present
+- Addition: 2 + [result]
+- Multiplication: 3 × 4
+
+Step 2: Perform multiplication first
+3 × 4 = 12
+
+Step 3: Perform addition
+2 + 12 = 14
+
+Verification: Following PEMDAS correctly gives us 14.
+&lt;/think&gt;
+&lt;answer&gt; 14 &lt;/answer&gt;"</code></pre>
+                                        </div>
+                                        <p><strong>Quality Improvement:</strong> Human refinement transforms messy, incomplete reasoning into clear, educational examples that serve as excellent training data for supervised fine-tuning.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="step-navigation">
+                            <button class="nav-button" id="coldstart-prev-btn" onclick="changeColdStartStep(-1)" disabled>Previous</button>
+                            <div class="step-indicators" id="coldstart-step-indicators">
+                                <div class="step-dot active" onclick="goToColdStartStep(0)"></div>
+                                <div class="step-dot" onclick="goToColdStartStep(1)"></div>
+                                <div class="step-dot" onclick="goToColdStartStep(2)"></div>
+                            </div>
+                            <button class="nav-button" id="coldstart-next-btn" onclick="changeColdStartStep(1)">Next</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="subsection">
+                    <h3 class="subsection-title">Dataset Preparation Pipeline</h3>
+                    
+                    <div class="card">
+                        <h4>Cold Start Data Processing</h4>
+                        <div class="code-block">
+<pre><code class="language-python">def prepare_cold_start_data():
+    """
+    Comprehensive pipeline for cold start data preparation
+    """
+    # Load base dataset
+    dataset = load_dataset("bespokelabs/Bespoke-Stratos-17k", "default")
+    
+    # Apply conversation formatting
+    def format_conversation(example):
+        return {
+            "prompt": [
+                {"role": "system", "content": SYSTEM_PROMPT},
+                {"role": "user", "content": example["problem"]},
+            ],
+            "completion": example["refined_solution"]  # Human-refined solutions
+        }
+    
+    # Process dataset
+    formatted_dataset = dataset.map(format_conversation)
+    
+    # Quality filtering
+    def quality_filter(example):
+        # Check for required reasoning indicators
+        reasoning_indicators = ["Step", "First", "Then", "Finally", "Because"]
+        has_reasoning = any(indicator in example["completion"] for indicator in reasoning_indicators)
+        
+        # Check format compliance
+        has_proper_format = "&lt;think&gt;" in example["completion"] and "&lt;answer&gt;" in example["completion"]
+        
+        return has_reasoning and has_proper_format
+    
+    filtered_dataset = formatted_dataset.filter(quality_filter)
+    
+    return filtered_dataset</code></pre>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="success-box">
+                    <h4>Cold Start Data Impact</h4>
+                    <p>The multi-faceted approach to cold start data generation creates a diverse, high-quality training corpus that addresses the specific weaknesses observed in R1 Zero while maintaining its reasoning strengths. This foundation enables effective supervised fine-tuning in the subsequent training stages.</p>
+                </div>
+            </section>
+
+            <!-- SFT Training Section -->
+            <section id="sft-training" class="section">
+                <h2 class="section-title">Supervised Fine-Tuning Training</h2>
+                
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-icon" style="background: var(--gradient-2);">📚</div>
+                        <h3 class="card-title">Learning from High-Quality Examples</h3>
+                    </div>
+                    
+                    <p>Supervised Fine-Tuning (SFT) transforms the raw reasoning potential of the base model into structured, consistent behavior. By training on carefully curated cold start data, the model learns to produce clear, well-formatted reasoning that addresses the critical limitations observed in R1 Zero.</p>
+                </div>
+
+                <div class="subsection">
+                    <h3 class="subsection-title">SFT Training Mechanics</h3>
+                    
+                    <div class="card">
+                        <h4>Cross-Entropy Loss Optimization</h4>
+                        <p>SFT employs supervised learning principles where the model learns to predict the next token in high-quality reasoning sequences. The training process optimizes the cross-entropy loss between predicted and target tokens:</p>
+                        
+                        <div class="highlight-box">
+                            <h5>Mathematical Foundation</h5>
+                            <p>$$\mathcal{L}_{SFT} = -\frac{1}{N} \sum_{i=1}^{N} \sum_{t=1}^{T} \log P(y_t^{(i)} | y_{\lt t}^{(i)}, x^{(i)}; \theta)$$</p>
+                            <p>Where:</p>
+                            <ul>
+                                <li>$N$ = number of training examples</li>
+                                <li>$T$ = sequence length</li>
+                                <li>$y_t^{(i)}$ = target token at position $t$ for example $i$</li>
+                                <li>$x^{(i)}$ = input problem for example $i$</li>
+                                <li>$\theta$ = model parameters</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <h4>Training Process Flow</h4>
+                        <ol>
+                            <li><strong>Input Processing:</strong> Problem prompts are tokenized and formatted with system instructions</li>
+                            <li><strong>Target Preparation:</strong> High-quality reasoning sequences serve as training targets</li>
+                            <li><strong>Forward Pass:</strong> Model generates token probabilities for each position</li>
+                            <li><strong>Loss Calculation:</strong> Cross-entropy loss measures prediction accuracy</li>
+                            <li><strong>Backpropagation:</strong> Gradients update model parameters to minimize loss</li>
+                            <li><strong>Parameter Update:</strong> Optimizer (AdamW) applies gradient-based updates</li>
+                        </ol>
+                    </div>
+                </div>
+
+                <div class="subsection">
+                    <h3 class="subsection-title">SFT Configuration and Implementation</h3>
+                    
+                    <div class="card">
+                        <h4>Training Configuration</h4>
+                        <div class="code-block">
+<pre><code class="language-python"># SFT Training Arguments
+training_args = TrainingArguments(
+    output_dir="./qwen-sft-training",
+    overwrite_output_dir=True,
+    num_train_epochs=1,
+    per_device_train_batch_size=8,
+    per_device_eval_batch_size=16,
+    gradient_accumulation_steps=2,
+    learning_rate=2e-5,           # Lower than GRPO for stability
+    warmup_ratio=0.1,
+    weight_decay=0.01,
+    logging_steps=10,
+    evaluation_strategy="no",
+    save_strategy="steps",
+    save_steps=50,
+    save_total_limit=2,
+    dataloader_num_workers=2,
+    seed=42,
+    bf16=True,
+    push_to_hub=False,
+    gradient_checkpointing=True,
+    report_to="none",
+    packing=True,                 # Enable efficient sequence packing
+    max_seq_length=4096          # Handle longer reasoning sequences
+)</code></pre>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <h4>SFT Trainer Implementation</h4>
+                        <div class="code-block">
+<pre><code class="language-python"># Initialize SFT Trainer
+sft_trainer = SFTTrainer(
+    model=model_sft,                     # Base model for fine-tuning
+    train_dataset=cold_start_dataset,    # High-quality reasoning examples
+    tokenizer=tokenizer,                 # Tokenizer for text processing
+    args=training_args,                  # Training configuration
+    dataset_text_field="conversations",  # Field containing conversation data
+    packing=True,                        # Enable data packing for efficiency
+    max_seq_length=4096                 # Maximum sequence length
+)
+
+# Execute training
+sft_train_result = sft_trainer.train()
+
+# Save the fine-tuned model
+sft_trainer.save_model("./qwen-sft-trained")</code></pre>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="subsection">
+                    <h3 class="subsection-title">SFT Training Outcomes</h3>
+                    
+                    <div class="card">
+                        <h4>Behavioral Improvements</h4>
+                        <table class="comparison-table">
+                            <thead>
+                                <tr>
+                                    <th>Aspect</th>
+                                    <th>Before SFT (R1 Zero)</th>
+                                    <th>After SFT (R1 Stage 1)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>Reasoning Structure</td>
+                                    <td>Messy, inconsistent formatting</td>
+                                    <td>Clear step-by-step organization</td>
+                                </tr>
+                                <tr>
+                                    <td>Language Consistency</td>
+                                    <td>Mixed languages in responses</td>
+                                    <td>Consistent language usage</td>
+                                </tr>
+                                <tr>
+                                    <td>Format Compliance</td>
+                                    <td>Irregular tag usage</td>
+                                    <td>Reliable &lt;think&gt;/&lt;answer&gt; structure</td>
+                                </tr>
+                                <tr>
+                                    <td>Reasoning Quality</td>
+                                    <td>Implicit, hard to follow</td>
+                                    <td>Explicit, educational explanations</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="success-box">
+                        <h4>SFT Stage 1 Achievements</h4>
+                        <p>The first SFT stage successfully addresses the primary issues identified in R1 Zero. The model now consistently produces well-structured reasoning with clear language usage, setting the foundation for advanced reasoning-oriented reinforcement learning in subsequent stages.</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Reasoning-Oriented RL Section -->
+            <section id="reasoning-rl" class="section">
+                <h2 class="section-title">Advanced Reasoning Optimization</h2>
+                
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-icon" style="background: var(--gradient-1);">🎯</div>
+                        <h3 class="card-title">Reasoning-Oriented Reinforcement Learning</h3>
+                    </div>
+                    
+                    <p>After establishing structured reasoning through SFT, the training pipeline applies advanced RL techniques to further refine reasoning quality, consistency, and alignment with human preferences. This stage introduces sophisticated reward systems that go beyond basic accuracy.</p>
+                </div>
+
+                <div class="subsection">
+                    <h3 class="subsection-title">Enhanced Reward Architecture</h3>
+                    
+                    <div class="card">
+                        <h4>Language Consistency Rewards</h4>
+                        <p>A critical addition to the reward system addresses the language mixing issues observed in R1 Zero:</p>
+                        
+                        <div class="code-block">
+<pre><code class="language-python">def language_consistency_reward(completions, input_language, **kwargs):
+    """
+    Reward function ensuring consistent language usage throughout the response.
+    """
+    contents = [completion[0]["content"] for completion in completions]
+    rewards = []
+    
+    for content in contents:
+        # Detect language of reasoning section
+        reasoning_lang = detect_language(extract_thinking_content(content))
+        
+        # Detect language of answer section  
+        answer_lang = detect_language(extract_answer_content(content))
+        
+        # Check consistency with input language
+        input_consistent = (reasoning_lang == input_language)
+        internal_consistent = (reasoning_lang == answer_lang)
+        
+        if input_consistent and internal_consistent:
+            reward = 1.0  # Perfect consistency
+        elif internal_consistent:
+            reward = 0.7  # Internal consistency but wrong language
+        else:
+            reward = 0.0  # Language mixing detected
+            
+        rewards.append(reward)
+    
+    return rewards</code></pre>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <h4>Reasoning Quality Assessment</h4>
+                        <p>Advanced evaluation of reasoning depth and logical coherence:</p>
+                        
+                        <div class="highlight-box">
+                            <h5>Multi-Dimensional Quality Metrics</h5>
+                            <ul>
+                                <li><strong>Logical Flow:</strong> Coherent progression from premises to conclusions</li>
+                                <li><strong>Step Completeness:</strong> No missing intermediate steps in reasoning</li>
+                                <li><strong>Assumption Clarity:</strong> Explicit statement of underlying assumptions</li>
+                                <li><strong>Error Detection:</strong> Self-correction and verification behaviors</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="subsection">
+                    <h3 class="subsection-title">Rejection Sampling for Quality Control</h3>
+                    
+                    <div class="card">
+                        <h4>High-Quality Data Curation</h4>
+                        <p>Rejection sampling filters generated responses to retain only the highest-quality reasoning examples:</p>
+                        
+                        <div class="code-block">
+<pre><code class="language-python">def rejection_sampling_pipeline(model, problems, quality_threshold=0.85):
+    """
+    Generate multiple responses and select only high-quality examples.
+    """
+    high_quality_examples = []
+    
+    for problem in problems:
+        # Generate multiple candidate responses
+        candidates = []
+        for _ in range(10):  # Generate 10 candidates per problem
+            response = model.generate(problem, temperature=0.8)
+            candidates.append(response)
+        
+        # Evaluate each candidate
+        scored_candidates = []
+        for candidate in candidates:
+            scores = {
+                'accuracy': evaluate_accuracy(candidate, problem.solution),
+                'reasoning_quality': evaluate_reasoning_quality(candidate),
+                'language_consistency': evaluate_language_consistency(candidate),
+                'format_compliance': evaluate_format_compliance(candidate)
+            }
+            
+            # Compute composite quality score
+            composite_score = (
+                scores['accuracy'] * 0.4 +
+                scores['reasoning_quality'] * 0.3 +
+                scores['language_consistency'] * 0.2 +
+                scores['format_compliance'] * 0.1
+            )
+            
+            scored_candidates.append((candidate, composite_score))
+        
+        # Select best candidate if it meets threshold
+        best_candidate, best_score = max(scored_candidates, key=lambda x: x[1])
+        if best_score >= quality_threshold:
+            high_quality_examples.append((problem, best_candidate))
+    
+    return high_quality_examples</code></pre>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="subsection">
+                    <h3 class="subsection-title">SFT Stage 2: Comprehensive Alignment</h3>
+                    
+                    <div class="card">
+                        <h4>Helpfulness and Harmlessness Integration</h4>
+                        <p>The final supervised fine-tuning stage incorporates broader AI alignment objectives:</p>
+                        
+                        <div class="card">
+                            <h5>Expanded Training Objectives</h5>
+                            <ul>
+                                <li><strong>Helpfulness:</strong> Responses provide useful, actionable information</li>
+                                <li><strong>Harmlessness:</strong> Outputs avoid harmful, biased, or dangerous content</li>
+                                <li><strong>Honesty:</strong> Model acknowledges uncertainty and limitations</li>
+                                <li><strong>Reasoning Excellence:</strong> Maintains high-quality step-by-step thinking</li>
+                            </ul>
+                        </div>
+
+                        <div class="warning-box">
+                            <h4>Balancing Multiple Objectives</h4>
+                            <p>The challenge in Stage 2 SFT lies in maintaining reasoning capabilities while incorporating broader alignment goals. Careful dataset curation and training techniques prevent degradation of reasoning quality during alignment training.</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Distillation Section -->
+            <section id="distillation" class="section">
+                <h2 class="section-title">Knowledge Distillation</h2>
+                
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-icon" style="background: var(--gradient-3);">🏗️</div>
+                        <h3 class="card-title">Scaling Reasoning Capabilities</h3>
+                    </div>
+                    
+                    <p>To make advanced reasoning capabilities accessible across different computational constraints, DeepSeek employs knowledge distillation to transfer the reasoning expertise of the full R1 model to smaller, more efficient variants.</p>
+                </div>
+
+                <div class="subsection">
+                    <h3 class="subsection-title">Distillation Methodology</h3>
+                    
+                    <div class="card">
+                        <h4>Teacher-Student Framework</h4>
+                        <div class="highlight-box">
+                            <h5>Distillation Process</h5>
+                            <ol>
+                                <li><strong>Teacher Model:</strong> Full DeepSeek R1 with complete reasoning capabilities</li>
+                                <li><strong>Student Models:</strong> Smaller architectures (various parameter counts)</li>
+                                <li><strong>Knowledge Transfer:</strong> Student learns to mimic teacher's reasoning patterns</li>
+                                <li><strong>Efficiency Optimization:</strong> Maintain reasoning quality with reduced computation</li>
+                            </ol>
+                        </div>
+                        
+                        <div class="code-block">
+<pre><code class="language-python"># Knowledge Distillation Loss Function
+def distillation_loss(student_logits, teacher_logits, target_tokens, temperature=3.0, alpha=0.7):
+    """
+    Combined loss function for knowledge distillation.
+    """
+    # Soft target loss (knowledge from teacher)
+    soft_targets = F.softmax(teacher_logits / temperature, dim=-1)
+    soft_loss = F.kl_div(
+        F.log_softmax(student_logits / temperature, dim=-1),
+        soft_targets,
+        reduction='batchmean'
+    ) * (temperature ** 2)
+    
+    # Hard target loss (ground truth)
+    hard_loss = F.cross_entropy(student_logits, target_tokens)
+    
+    # Combined loss
+    total_loss = alpha * soft_loss + (1 - alpha) * hard_loss
+    return total_loss</code></pre>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <h4>Multi-Scale Distillation Strategy</h4>
+                        <table class="comparison-table">
+                            <thead>
+                                <tr>
+                                    <th>Model Size</th>
+                                    <th>Parameters</th>
+                                    <th>Use Case</th>
+                                    <th>Reasoning Retention</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>R1-Large</td>
+                                    <td>70B+</td>
+                                    <td>High-performance reasoning</td>
+                                    <td>95-98%</td>
+                                </tr>
+                                <tr>
+                                    <td>R1-Medium</td>
+                                    <td>14-32B</td>
+                                    <td>Balanced performance/efficiency</td>
+                                    <td>85-92%</td>
+                                </tr>
+                                <tr>
+                                    <td>R1-Small</td>
+                                    <td>1.5-7B</td>
+                                    <td>Edge deployment</td>
+                                    <td>70-80%</td>
+                                </tr>
+                                <tr>
+                                    <td>R1-Tiny</td>
+                                    <td>0.5-1.5B</td>
+                                    <td>Mobile/embedded systems</td>
+                                    <td>60-70%</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="subsection">
+                    <h3 class="subsection-title">Implementation Results</h3>
+                    
+                    <div class="success-box">
+                        <h4>Distillation Achievements</h4>
+                        <p>The distillation process successfully creates a family of reasoning-capable models that maintain the core structural and logical reasoning abilities of the full R1 model while offering significant computational savings. This democratizes access to advanced reasoning capabilities across diverse deployment scenarios.</p>
+                    </div>
+
+                    <div class="card">
+                        <h4>Performance Benchmarks</h4>
+                        <p>Distilled models demonstrate remarkable retention of reasoning capabilities:</p>
+                        <ul>
+                            <li><strong>Mathematical Reasoning:</strong> 85-95% of teacher performance across model sizes</li>
+                            <li><strong>Code Generation:</strong> Maintained logical structure and correctness</li>
+                            <li><strong>Scientific Problem Solving:</strong> Preserved step-by-step analytical approach</li>
+                            <li><strong>Language Consistency:</strong> Retained multilingual reasoning coherence</li>
+                        </ul>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Summary Section -->
+            <section id="summary" class="section">
+                <h2 class="section-title">Training Pipeline Summary</h2>
+                
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-icon" style="background: var(--gradient-2);">🎓</div>
+                        <h3 class="card-title">Complete DeepSeek R1 Methodology</h3>
+                    </div>
+                    
+                    <p>The DeepSeek R1 training methodology represents a comprehensive approach to developing reasoning-capable language models through iterative improvement and multi-stage optimization.</p>
+                </div>
+
+                <div class="card">
+                    <h4>Key Innovations and Contributions</h4>
+                    <div class="subsection">
+                        <h5>🔬 Technical Innovations</h5>
+                        <ul>
+                            <li><strong>GRPO Algorithm:</strong> Critic-free reinforcement learning for efficient training</li>
+                            <li><strong>Multi-Dimensional Rewards:</strong> Comprehensive evaluation beyond simple accuracy</li>
+                            <li><strong>Cold Start Data Generation:</strong> Systematic creation of high-quality reasoning examples</li>
+                            <li><strong>Iterative Refinement:</strong> Progressive improvement through multiple training stages</li>
+                        </ul>
+                    </div>
+
+                    <div class="subsection">
+                        <h5>🎯 Methodological Insights</h5>
+                        <ul>
+                            <li><strong>Structured Reasoning:</strong> Clear separation of thinking and conclusion phases</li>
+                            <li><strong>Language Consistency:</strong> Addressing multilingual reasoning challenges</li>
+                            <li><strong>Quality Control:</strong> Rejection sampling for training data curation</li>
+                            <li><strong>Scalability:</strong> Knowledge distillation for diverse deployment scenarios</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h4>Implementation Pathway</h4>
+                    <p>This guide provides a complete roadmap for implementing DeepSeek R1-style training:</p>
+                    <ol>
+                        <li><strong>Environment Setup:</strong> Configure development environment and dependencies</li>
+                        <li><strong>Base Model Selection:</strong> Choose appropriate foundation model for your scale</li>
+                        <li><strong>R1 Zero Training:</strong> Implement GRPO with multi-dimensional rewards</li>
+                        <li><strong>Cold Start Generation:</strong> Create high-quality reasoning examples</li>
+                        <li><strong>SFT Training:</strong> Supervised fine-tuning for structured reasoning</li>
+                        <li><strong>Advanced RL:</strong> Reasoning-oriented reinforcement learning</li>
+                        <li><strong>Distillation:</strong> Scale to multiple model sizes</li>
+                    </ol>
+                </div>
+
+                <div class="highlight-box">
+                    <h4>Future Directions</h4>
+                    <p>The DeepSeek R1 methodology opens several avenues for future research and development:</p>
+                    <ul>
+                        <li><strong>Domain Specialization:</strong> Adapting the pipeline for specific reasoning domains</li>
+                        <li><strong>Multimodal Reasoning:</strong> Extending to visual and audio reasoning tasks</li>
+                        <li><strong>Efficiency Optimization:</strong> Further reducing computational requirements</li>
+                        <li><strong>Evaluation Frameworks:</strong> Developing comprehensive reasoning assessment tools</li>
+                    </ul>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <script>
+        // All interactive step logic has been removed.
+    </script>
+    
+    <!-- Scripts for rendering -->
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js" integrity="sha384-XjKyOOlGwcjNTAIQHIpgOno0Hl1YQqzUOEleOLALmuqehneUG+vnGctmUb0ZY0l8" crossorigin="anonymous"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" integrity="sha384-+VBxd3r6XgURycqtZ117nYw44OOcIax56Z4dCRWbxyPt0Koah1uHoK0o4+/RRE05" crossorigin="anonymous" onload="renderMathInElement(document.body);"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script>hljs.highlightAll();</script>
+</body>
+</html> 
