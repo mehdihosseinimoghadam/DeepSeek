@@ -18,6 +18,8 @@ Explore the mathematical underpinnings and comparative analysis of **PPO**, **DP
 
 👉 [PPO, DPO, GRPO Explained](https://mehdihosseinimoghadam.github.io/DeepSeek/PPO%20DPO%20GRPO.html)
 
+👉 [PPO Huggingface](https://mehdihosseinimoghadam.github.io/DeepSeek/ppo_trainer_interactive.html)
+
 ---
 
 Post By Mehdi Hosseini Moghadam
